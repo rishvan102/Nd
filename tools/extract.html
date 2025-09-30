@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>📤 Extract Pages • NiceDay PDF Jar</title>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    /* Card */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    /* Drop zone / file */
+    .drop{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s ease, background .15s ease}
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    #file{display:none}
+    .fileBadge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* Inputs / chips */
+    .input{width:100%;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--ink);font-weight:600}
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .chip{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.85rem}
+    .chip:hover{filter:brightness(1.04)}
+
+    /* Preview tray */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
+    .thumb{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:6px;text-align:center}
+    .thumb canvas{width:100%;height:auto;display:block;border-radius:6px}
+    .thumb label{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+    .thumb input{margin-right:6px}
+
+    /* CTA / status */
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;background:linear-gradient(90deg,var(--brand),var(--brand-2));cursor:pointer;box-shadow:0 8px 18px rgba(37,99,235,.25)}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .count{margin-top:6px;font-size:12px;color:var(--muted)}
+
+    @media(max-width:640px){.title h1{font-size:18px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📤 Extract Pages</h1>
+          <p class="subtitle">Keep only the pages you select or list (e.g., <code>1-3,9</code>).</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <!-- Modern drop zone -->
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <span>📄 Drop your PDF or click to choose</span>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <!-- Manual ranges -->
+      <label for="list" style="display:block;margin-top:12px;">
+        Pages to keep (manual)
+        <input id="list" class="input" placeholder="e.g. 1-3,9" inputmode="numeric" />
+      </label>
+
+      <!-- Quick chips -->
+      <div class="chips" role="group" aria-label="Quick selection">
+        <button type="button" class="chip" id="chipFirst">First</button>
+        <button type="button" class="chip" id="chipLast">Last</button>
+        <button type="button" class="chip" id="chipOdd">Odd</button>
+        <button type="button" class="chip" id="chipEven">Even</button>
+        <button type="button" class="chip" id="selectAll">All</button>
+        <button type="button" class="chip" id="invertSel">Invert</button>
+        <button type="button" class="chip" id="clearSel">Clear</button>
+      </div>
+
+      <!-- Thumbnails -->
+      <div id="preview" class="grid" aria-live="polite" aria-label="Page previews"></div>
+      <p id="selCount" class="count" hidden>Selected 0 of 0</p>
+
+      <!-- Action -->
+      <button id="go" class="cta">Extract &amp; Download</button>
+      <p id="status" class="status" aria-live="polite">PDF not loaded yet.</p>
+      <p class="status" style="margin-top:6px">Hint: If you both check pages and type ranges, we’ll combine them (no duplicates).</p>
+    </section>
+  </main>
+
+  <!-- libs for preview + export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme (light default) ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    function setTheme(mode){
+      root.setAttribute('data-theme', mode);
+      themeBtn.textContent = mode === 'dark' ? '☀️ Light' : '🌙 Dark';
+      localStorage.setItem('nd-theme', mode);
+    }
+    setTheme(localStorage.getItem('nd-theme') || 'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark' ? 'light' : 'dark'));
+
+    /* ---------- Elements ---------- */
+    const file = document.getElementById('file');
+    const drop = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const listEl = document.getElementById('list');
+    const preview = document.getElementById('preview');
+    const statusEl = document.getElementById('status');
+    const selCountEl = document.getElementById('selCount');
+
+    let pdfDoc = null;
+
+    function setBadge(name,size){
+      if(!name){ badge.hidden = true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+
+    /* ---------- Drag & Drop ---------- */
+    drop.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); file.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = '#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = 'var(--border)'; });
+    });
+    drop.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type==='application/pdf'){
+        file.files = e.dataTransfer.files;
+        file.dispatchEvent(new Event('change'));
+      }
+    });
+
+    /* ---------- Preview rendering ---------- */
+    const updateSelectedCount = ()=>{
+      if(!pdfDoc){ selCountEl.hidden = true; return; }
+      const total = pdfDoc.numPages;
+      const sel = preview.querySelectorAll('input[type="checkbox"]:checked').length;
+      selCountEl.textContent = `Selected ${sel} of ${total}`;
+      selCountEl.hidden = false;
+    };
+
+    async function renderPreviews(){
+      preview.innerHTML = '';
+      if(!pdfDoc) return;
+      const count = pdfDoc.numPages;
+      for(let i=1;i<=count;i++){
+        const page = await pdfDoc.getPage(i);
+        const vp = page.getViewport({ scale: 0.4 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently:true });
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+        const div = document.createElement('div'); div.className = 'thumb';
+        const check = document.createElement('input'); check.type='checkbox'; check.value = String(i);
+        check.addEventListener('change', updateSelectedCount);
+        const label = document.createElement('label'); label.append(check, ' Page ' + i);
+        div.append(canvas, label);
+        preview.appendChild(div);
+      }
+      updateSelectedCount();
+    }
+
+    file.addEventListener('change', async e=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      setBadge(f.name, f.size);
+      statusEl.textContent = 'Loading PDF…';
+      try{
+        const buf = await f.arrayBuffer();
+        pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+        await renderPreviews();
+        statusEl.textContent = `Loaded ${pdfDoc.numPages} pages. Select visually or type ranges.`;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to load PDF.';
+      }
+    });
+
+    /* ---------- Quick chips ---------- */
+    function needPdf(){ if(!pdfDoc){ statusEl.textContent='Load a PDF first.'; return false; } return true; }
+    function setChecks(fn){
+      if(!needPdf()) return;
+      preview.querySelectorAll('input[type="checkbox"]').forEach((c,i)=> c.checked = fn(i+1, pdfDoc.numPages));
+      updateSelectedCount();
+    }
+    document.getElementById('chipFirst').onclick = ()=> setChecks(n=>n===1);
+    document.getElementById('chipLast').onclick  = ()=> setChecks((n,t)=>n===t);
+    document.getElementById('chipOdd').onclick   = ()=> setChecks(n=>n%2===1);
+    document.getElementById('chipEven').onclick  = ()=> setChecks(n=>n%2===0);
+    document.getElementById('selectAll').onclick = ()=> setChecks(()=>true);
+    document.getElementById('clearSel').onclick  = ()=> setChecks(()=>false);
+    document.getElementById('invertSel').onclick = ()=> {
+      if(!needPdf()) return;
+      preview.querySelectorAll('input[type="checkbox"]').forEach(c=> c.checked = !c.checked);
+      updateSelectedCount();
+    };
+
+    /* ---------- Range parser ---------- */
+    function parseRanges(str, max){
+      if(!str) return [];
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).forEach(tok=>{
+        if(!tok) return;
+        if(tok.includes('-')){
+          const [aStr,bStr] = tok.split('-');
+          const a = Number(aStr), b = Number(bStr);
+          if(Number.isFinite(a) && Number.isFinite(b) && a>=1 && b>=a){
+            for(let i=a;i<=b && i<=max;i++) out.add(i);
+          }
+        } else {
+          const n = Number(tok);
+          if(Number.isFinite(n) && n>=1 && n<=max) out.add(n);
+        }
+      });
+      return [...out];
+    }
+
+    /* ---------- Extract ---------- */
+    document.getElementById('go').onclick = async ()=>{
+      if(!needPdf()) return;
+      const f = file.files?.[0];
+      if(!f){ statusEl.textContent='Choose a PDF first.'; return; }
+
+      statusEl.textContent = 'Preparing…';
+      const buf = await f.arrayBuffer();
+      const src = await PDFLib.PDFDocument.load(buf);
+      const total = src.getPageCount();
+
+      // Visual checks
+      const checks = [...preview.querySelectorAll('input[type="checkbox"]:checked')]
+        .map(c=>Number(c.value))
+        .filter(n=>Number.isFinite(n) && n>=1 && n<=total);
+
+      // Manual ranges
+      const manual = parseRanges(listEl.value, total);
+
+      // Combine, unique, sort ascending to preserve original order
+      const keep = [...new Set([...checks, ...manual])].sort((a,b)=>a-b);
+
+      if(keep.length===0){
+        statusEl.textContent = 'No valid pages selected.';
+        return;
+      }
+
+      const out = await PDFLib.PDFDocument.create();
+      for(const p of keep){
+        const zeroIdx = p - 1;
+        if(zeroIdx < 0 || zeroIdx >= total) continue;
+        const [copied] = await out.copyPages(src, [zeroIdx]);
+        out.addPage(copied);
+      }
+
+      const bytes = await out.save();
+      const url = URL.createObjectURL(new Blob([bytes], { type:'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'extracted.pdf'; a.click();
+
+      statusEl.textContent = `Done. Kept pages: ${keep.join(', ')}`;
+      window.showCelebration?.(url);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>📚 Duplicate Pages • NiceDay PDF Jar</title>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui}
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+      box-shadow:var(--shadow);padding:14px;margin-bottom:20px}
+
+    .drop{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--card);cursor:pointer}
+    #file{display:none}
+    .fileBadge{margin-left:auto;font-size:12px;padding:6px 10px;border:1px solid var(--border);
+      border-radius:10px;color:var(--muted);max-width:55%;overflow:hidden;text-overflow:ellipsis}
+
+    .input{width:100%;margin-top:12px;padding:10px 12px;border-radius:12px;
+      border:1px solid var(--border);background:var(--card);color:var(--ink)}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .chip{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.85rem}
+    .chip:hover{filter:brightness(1.05)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
+    .thumb{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:6px;text-align:center}
+    .thumb canvas{width:100%;height:auto;display:block;border-radius:6px}
+    .thumb label{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+    .thumb input{margin-right:6px}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+    .seg{
+      display:inline-flex; border:1px solid var(--border); border-radius:999px; overflow:hidden; background:var(--card);
+    }
+    .seg input{display:none}
+    .seg label{
+      padding:.45rem .75rem; cursor:pointer; font-weight:700; color:var(--muted); user-select:none;
+    }
+    .seg input:checked + label{ background:linear-gradient(90deg,var(--brand),var(--brand-2)); color:#fff; }
+
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg,var(--brand),var(--brand-2));cursor:pointer}
+    .cta:hover{filter:brightness(1.05)}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .count{margin-top:6px;font-size:12px;color:var(--muted)}
+    @media(max-width:640px){.title h1{font-size:18px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📚 Duplicate Pages</h1>
+          <p class="subtitle">Keep original PDF intact & duplicate selected pages (placement is your choice).</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <label for="file" class="drop" id="dropZone" tabindex="0">
+        <span>📄 Drop your PDF or click to choose</span>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <label for="ranges" style="display:block;margin-top:12px;">
+        Pages to duplicate (manual)
+        <input id="ranges" class="input" placeholder="e.g. 2,4-5" inputmode="numeric" />
+      </label>
+
+      <div class="chips">
+        <button type="button" class="chip" id="chipFirst">First</button>
+        <button type="button" class="chip" id="chipLast">Last</button>
+        <button type="button" class="chip" id="chipOdd">Odd</button>
+        <button type="button" class="chip" id="chipEven">Even</button>
+        <button type="button" class="chip" id="selectAll">All</button>
+        <button type="button" class="chip" id="clearSel">Clear</button>
+      </div>
+
+      <!-- Placement toggle -->
+      <div class="row" role="group" aria-label="Duplicate placement">
+        <strong style="color:var(--muted)">Placement:</strong>
+        <div class="seg">
+          <input type="radio" name="place" id="placeAppend" value="append" checked>
+          <label for="placeAppend">Append at end</label>
+          <input type="radio" name="place" id="placeAfter" value="after">
+          <label for="placeAfter">After each original</label>
+        </div>
+      </div>
+
+      <div id="preview" class="grid"></div>
+      <p id="selCount" class="count" hidden>Selected 0 of 0</p>
+
+      <button id="go" class="cta">Duplicate &amp; Download</button>
+      <p id="status" class="status">PDF not loaded yet.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* Theme */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){
+      root.setAttribute('data-theme',mode);
+      themeBtn.textContent = mode==='dark' ? '☀️ Light' : '🌙 Dark';
+      localStorage.setItem('nd-theme',mode);
+    }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.onclick=()=>setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+    /* Els */
+    const file=document.getElementById('file');
+    const drop=document.getElementById('dropZone');
+    const badge=document.getElementById('fileBadge');
+    const preview=document.getElementById('preview');
+    const statusEl=document.getElementById('status');
+    const rangesEl=document.getElementById('ranges');
+    const selCountEl=document.getElementById('selCount');
+    const placeRadios=[...document.querySelectorAll('input[name="place"]')];
+
+    let pdfDoc=null;
+
+    function setBadge(name,size){
+      if(!name){badge.hidden=true;return;}
+      const kb=Math.max(1,Math.round(size/1024));
+      badge.textContent=`${name} • ${kb} KB`; badge.hidden=false;
+    }
+
+    drop.addEventListener('keydown', e=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); file.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor='#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor='var(--border)'; });
+    });
+    drop.addEventListener('drop', e=>{
+      const f=e.dataTransfer?.files?.[0];
+      if(f && f.type==='application/pdf'){ file.files=e.dataTransfer.files; file.dispatchEvent(new Event('change')); }
+    });
+
+    const updateSelectedCount=()=>{
+      if(!pdfDoc){ selCountEl.hidden=true; return; }
+      const total=pdfDoc.numPages;
+      const sel=preview.querySelectorAll('input:checked').length;
+      selCountEl.textContent=`Selected ${sel} of ${total}`;
+      selCountEl.hidden=false;
+    };
+
+    async function renderPreviews(){
+      preview.innerHTML='';
+      if(!pdfDoc)return;
+      const count=pdfDoc.numPages;
+      for(let i=1;i<=count;i++){
+        const page=await pdfDoc.getPage(i);
+        const vp=page.getViewport({scale:0.4});
+        const canvas=document.createElement('canvas');
+        const ctx=canvas.getContext('2d');
+        canvas.width=vp.width; canvas.height=vp.height;
+        await page.render({canvasContext:ctx,viewport:vp}).promise;
+
+        const div=document.createElement('div'); div.className='thumb';
+        const check=document.createElement('input'); check.type='checkbox'; check.value=String(i);
+        check.onchange=updateSelectedCount;
+        const label=document.createElement('label'); label.append(check,' Page '+i);
+        div.append(canvas,label); preview.appendChild(div);
+      }
+      updateSelectedCount();
+    }
+
+    file.onchange=async e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      setBadge(f.name,f.size);
+      statusEl.textContent='Loading PDF…';
+      try{
+        const buf=await f.arrayBuffer();
+        pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
+        await renderPreviews();
+        statusEl.textContent=`Loaded ${pdfDoc.numPages} pages. Select visually or type ranges.`;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent='Failed to load PDF.';
+      }
+    };
+
+    function needPdf(){ if(!pdfDoc){ statusEl.textContent='Load a PDF first.'; return false;} return true; }
+    function setChecks(fn){
+      if(!needPdf()) return;
+      preview.querySelectorAll('input[type="checkbox"]').forEach((c,i)=>c.checked = fn(i+1,pdfDoc.numPages));
+      updateSelectedCount();
+    }
+    chipFirst.onclick=()=>setChecks(n=>n===1);
+    chipLast.onclick =()=>setChecks((n,t)=>n===t);
+    chipOdd.onclick  =()=>setChecks(n=>n%2===1);
+    chipEven.onclick =()=>setChecks(n=>n%2===0);
+    selectAll.onclick=()=>setChecks(()=>true);
+    clearSel.onclick =()=>setChecks(()=>false);
+
+    function parseRanges(str,max){
+      if(!str) return [];
+      const out=new Set();
+      str.split(',').map(s=>s.trim()).forEach(p=>{
+        if(!p) return;
+        if(p.includes('-')){
+          const [a,b]=p.split('-').map(Number);
+          if(Number.isFinite(a)&&Number.isFinite(b)&&a>=1&&b>=a){
+            for(let i=a;i<=b&&i<=max;i++) out.add(i);
+          }
+        }else{
+          const n=Number(p);
+          if(Number.isFinite(n)&&n>=1&&n<=max) out.add(n);
+        }
+      });
+      return [...out];
+    }
+
+    go.onclick=async()=>{
+      if(!needPdf()) return;
+      const f=file.files?.[0]; if(!f){ statusEl.textContent='Choose a PDF first.'; return; }
+
+      statusEl.textContent='Preparing…';
+      const buf=await f.arrayBuffer();
+      const src=await PDFLib.PDFDocument.load(buf);
+      const total=src.getPageCount();
+
+      const checks=[...preview.querySelectorAll('input:checked')]
+        .map(c=>Number(c.value))
+        .filter(n=>Number.isFinite(n)&&n>=1&&n<=total);
+
+      const manual=parseRanges(rangesEl.value,total);
+      const pages=[...new Set([...checks,...manual])].sort((a,b)=>a-b);
+
+      if(!pages.length){ statusEl.textContent='No valid pages selected.'; return; }
+
+      const placement = placeRadios.find(r=>r.checked)?.value || 'append';
+      const out=await PDFLib.PDFDocument.create();
+
+      if(placement==='append'){
+        // 1) copy ALL originals
+        const originals = await out.copyPages(src, src.getPageIndices());
+        originals.forEach(p=>out.addPage(p));
+        // 2) append duplicates
+        for(const p of pages){
+          const [dup] = await out.copyPages(src, [p-1]);
+          out.addPage(dup);
+        }
+      } else {
+        // Insert after each original that was selected
+        const selected = new Set(pages); // 1-based
+        for(let i=0;i<total;i++){
+          const [orig] = await out.copyPages(src, [i]);
+          out.addPage(orig);
+          if(selected.has(i+1)){
+            const [dup] = await out.copyPages(src, [i]);
+            out.addPage(dup);
+          }
+        }
+      }
+
+      const bytes=await out.save();
+      const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+      const a=document.createElement('a'); a.href=url; a.download='duplicated.pdf'; a.click();
+
+      statusEl.textContent = `Done. Duplicated pages (${placement}): ${pages.join(', ')}`;
+      window.showCelebration?.(url);
+    };
+  </script>
+</body>
+</html>

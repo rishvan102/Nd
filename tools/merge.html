@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🔗 Merge PDFs • NiceDay PDF Jar</title>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;flex:0 0 42px;
+      display:grid;place-items:center;font-weight:800;letter-spacing:.3px;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.4rem .75rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    /* Card */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* Drop zone */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    #files{display:none}
+    .hint{color:var(--muted);font-size:12px;margin-top:6px}
+
+    /* Controls */
+    .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .chip{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.85rem;
+    }
+    .chip:hover{filter:brightness(1.02)}
+
+    /* List */
+    .list{margin-top:12px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+    .item{
+      display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border);touch-action:none;
+    }
+    .item:first-child{border-top:none}
+    .drag{cursor:grab;user-select:none}
+    .name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .size{color:var(--muted);font-size:12px}
+    .rm{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:6px 8px;cursor:pointer}
+    .ghost{opacity:.5}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+
+    /* Progress */
+    .progress{display:none;margin-top:10px;height:10px;border:1px solid var(--border);border-radius:999px;overflow:hidden;background:color-mix(in oklab, var(--card), #000 4%)}
+    .progress>span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .12s ease}
+
+    /* CTA */
+    .cta{
+      margin-top:12px; width:100%; padding:12px 14px; border:0; border-radius:12px;
+      color:#fff; font-weight:800; letter-spacing:.2px; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .cta:hover{filter:brightness(1.02)}
+    .cta:active{transform:translateY(1px)}
+
+    @media (max-width:640px){
+      .title h1{font-size:18px}
+      .logo{width:38px;height:38px;border-radius:11px}
+      .drop{padding:12px}
+      .drop .ic{width:36px;height:36px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🔗 Merge PDFs</h1>
+          <p class="subtitle">Select multiple PDFs, arrange, then merge in order.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <!-- drop zone -->
+      <label for="files" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDFs here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDFs here, or click to choose</strong>
+          <div class="subtitle">Add several files; you can reorder below</div>
+        </div>
+      </label>
+      <input id="files" type="file" accept="application/pdf" multiple />
+      <div class="hint">Tip: You can drag to reorder, swipe/hold on mobile to move items.</div>
+
+      <!-- controls -->
+      <div class="row" role="group" aria-label="List tools">
+        <button class="chip" id="btnSortAZ">Sort A → Z</button>
+        <button class="chip" id="btnSortZA">Sort Z → A</button>
+        <button class="chip" id="btnReverse">Reverse</button>
+        <button class="chip" id="btnClear">Clear all</button>
+      </div>
+
+      <!-- list -->
+      <div id="list" class="list" aria-live="polite" aria-label="Files to merge"></div>
+
+      <!-- merge -->
+      <button id="go" class="cta">Merge &amp; Download</button>
+
+      <div class="progress" id="bar"><span id="barFill"></span></div>
+      <p id="status" class="status" aria-live="polite">No files yet.</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+  <script>
+    /* Theme */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.onclick=()=>setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+    /* State */
+    const listEl = document.getElementById('list');
+    const filesInput = document.getElementById('files');
+    const statusEl = document.getElementById('status');
+    const bar = document.getElementById('bar'), barFill=document.getElementById('barFill');
+    let items = []; // { id, file, name, size }
+
+    function humanKB(b){ return Math.max(1, Math.round(b/1024)) + ' KB'; }
+
+    function redraw(){
+      listEl.innerHTML='';
+      if(items.length===0){ statusEl.textContent='No files yet.'; return; }
+      statusEl.textContent = `${items.length} file(s) ready. Drag to reorder.`;
+      items.forEach((it, idx)=>{
+        const row=document.createElement('div'); row.className='item'; row.dataset.id=it.id;
+
+        const drag=document.createElement('span'); drag.className='drag'; drag.textContent='↕';
+        const idxTag=document.createElement('span'); idxTag.className='size'; idxTag.textContent=String(idx+1)+'.';
+        const name=document.createElement('div'); name.className='name'; name.textContent=it.name;
+        const size=document.createElement('div'); size.className='size'; size.textContent=humanKB(it.size);
+        const rm=document.createElement('button'); rm.className='rm'; rm.textContent='✕';
+
+        rm.onclick=()=>{ items=items.filter(x=>x.id!==it.id); redraw(); };
+
+        row.append(drag, idxTag, name, size, rm);
+        makeDraggable(row);
+        listEl.appendChild(row);
+      });
+    }
+
+    function addFiles(fileList){
+      const arr=[...fileList].filter(f=>f && f.type==='application/pdf');
+      if(arr.length===0) return;
+      arr.forEach(f=> items.push({ id:crypto.randomUUID(), file:f, name:f.name, size:f.size }));
+      redraw();
+    }
+
+    filesInput.addEventListener('change', e=> addFiles(e.target.files));
+
+    // Drop zone helpers
+    const dropZone=document.getElementById('dropZone');
+    dropZone.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); filesInput.click(); }});
+    ['dragenter','dragover'].forEach(ev=> dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#9ab6ff'; }));
+    ['dragleave','drop'].forEach(ev=> dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='var(--border)'; }));
+    dropZone.addEventListener('drop', e=> addFiles(e.dataTransfer?.files||[]));
+
+    // Sort / reverse / clear
+    document.getElementById('btnSortAZ').onclick = ()=>{ items.sort((a,b)=>a.name.localeCompare(b.name)); redraw(); };
+    document.getElementById('btnSortZA').onclick = ()=>{ items.sort((a,b)=>b.name.localeCompare(a.name)); redraw(); };
+    document.getElementById('btnReverse').onclick = ()=>{ items.reverse(); redraw(); };
+    document.getElementById('btnClear').onclick = ()=>{ items=[]; redraw(); };
+
+    // Drag & reorder (pointer events → works on desktop & mobile)
+    let dragId=null, startY=0, startIndex=0;
+    function makeDraggable(row){
+      const onPointerDown = (e)=>{
+        // Only start when grabbing near the left (drag handle or anywhere)
+        e.preventDefault();
+        dragId=row.dataset.id; row.setPointerCapture(e.pointerId);
+        startY=e.clientY; startIndex=[...listEl.children].indexOf(row);
+        row.classList.add('ghost');
+      };
+      const onPointerMove = (e)=>{
+        if(!dragId) return;
+        const dy=e.clientY-startY;
+        // Determine target index by vertical movement thresholds
+        const rows=[...listEl.children];
+        const curIndex=rows.findIndex(r=>r.dataset.id===dragId);
+        const swapWith = (dy>20 && curIndex<rows.length-1) ? curIndex+1
+                        : (dy<-20 && curIndex>0) ? curIndex-1
+                        : -1;
+        if(swapWith!==-1){
+          const aIdx=curIndex, bIdx=swapWith;
+          const a=items[aIdx], b=items[bIdx];
+          items[aIdx]=b; items[bIdx]=a;
+          startY=e.clientY; // reset threshold
+          redraw();
+        }
+      };
+      const onPointerUp = (e)=>{
+        if(!dragId) return;
+        row.releasePointerCapture?.(e.pointerId);
+        dragId=null; row.classList.remove('ghost');
+        redraw();
+      };
+      row.addEventListener('pointerdown', onPointerDown);
+      row.addEventListener('pointermove', onPointerMove);
+      row.addEventListener('pointerup', onPointerUp);
+      row.addEventListener('pointercancel', onPointerUp);
+      row.addEventListener('lostpointercapture', onPointerUp);
+    }
+
+    // Merge
+    document.getElementById('go').onclick = async ()=>{
+      if(items.length===0){ statusEl.textContent='Add at least one PDF.'; return; }
+      bar.style.display='block'; barFill.style.width='0%'; statusEl.textContent='Merging…';
+
+      try{
+        const out = await PDFLib.PDFDocument.create();
+        for(let i=0;i<items.length;i++){
+          const it=items[i];
+          const bytes = await it.file.arrayBuffer();
+          const src = await PDFLib.PDFDocument.load(bytes);
+          const idxs = Array.from({length:src.getPageCount()}, (_,k)=>k);
+          const copied = await out.copyPages(src, idxs);
+          copied.forEach(p=> out.addPage(p));
+          barFill.style.width = Math.round(((i+1)/items.length)*100) + '%';
+        }
+
+        const finalBytes = await out.save();
+        const blob = new Blob([finalBytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        const a=document.createElement('a');
+        a.href=url; a.download='merged.pdf'; a.click();
+
+        statusEl.textContent='Done. Downloaded merged.pdf';
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent='Error: ' + (err?.message||err);
+      }finally{
+        setTimeout(()=>{ bar.style.display='none'; }, 300);
+      }
+    };
+  </script>
+</body>
+</html>

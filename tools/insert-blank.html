@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>📄➕ Insert Blank Pages • NiceDay PDF Jar</title>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;flex:0 0 42px;
+      display:grid;place-items:center;font-weight:800;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.4rem .75rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .input, select{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border); background:var(--card); color:var(--ink); font-weight:600;
+    }
+    .input:focus, select:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .num{max-width:160px}
+
+    .radio{display:flex;gap:12px;align-items:center;flex-wrap:wrap;color:var(--muted)}
+    .radio label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 10px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.85rem;
+    }
+    .chip:hover{filter:brightness(1.02)}
+
+    .cta{
+      margin-top:12px; width:100%; padding:12px 14px; border:0; border-radius:12px;
+      color:#fff; font-weight:800; letter-spacing:.2px; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .cta:hover{filter:brightness(1.02)}
+    .cta:active{transform:translateY(1px)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:4px;color:var(--muted);font-size:12px}
+
+    @media (max-width:640px){
+      .title h1{font-size:18px}
+      .logo{width:38px;height:38px;border-radius:11px}
+      .drop{padding:12px}
+      .drop .ic{width:36px;height:36px}
+      .fileBadge{max-width:60%}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📄➕ Insert Blank Pages</h1>
+          <p class="subtitle">Add one or more blank pages before/after positions (ranges ok: <code>1,3-5</code>).</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <section class="card">
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">Single PDF • We’ll show page count after loading</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <div class="row">
+        <div style="flex:1 1 360px">
+          <label>Pages (commas & ranges)
+            <input id="positions" class="input" placeholder="e.g., 1,3-5" inputmode="numeric" />
+          </label>
+        </div>
+
+        <div class="num">
+          <label>Insert count (per position)
+            <input id="count" class="input" type="number" min="1" value="1" />
+          </label>
+        </div>
+
+        <div style="flex:1 1 220px">
+          <label>Blank page size
+            <select id="sizeSel">
+              <option value="match" selected>Match neighboring page (default)</option>
+              <option value="a4p">A4 Portrait (595×842 pt)</option>
+              <option value="a4l">A4 Landscape (842×595 pt)</option>
+              <option value="letp">Letter Portrait (612×792 pt)</option>
+              <option value="letl">Letter Landscape (792×612 pt)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="radio" style="margin-top:10px">
+        <span>Insert</span>
+        <label><input type="radio" name="mode" value="after" checked> after page(s)</label>
+        <label><input type="radio" name="mode" value="before"> before page(s)</label>
+      </div>
+
+      <div class="chips" role="group" aria-label="Quick picks">
+        <button class="chip" type="button" id="chipStart">Start</button>
+        <button class="chip" type="button" id="chipEnd">End</button>
+        <button class="chip" type="button" id="chipEvery">Every <span id="nLbl">2</span> pages</button>
+        <input id="everyN" class="input num" type="number" min="2" value="2" style="max-width:90px" aria-label="Every N" />
+        <button class="chip" type="button" id="chipClear">Clear</button>
+      </div>
+
+      <button id="go" class="cta">Insert &amp; Download</button>
+      <p id="status" class="status" aria-live="polite">PDF not loaded yet.</p>
+      <p class="hint">Tip: Page numbers start at <b>1</b>. “After 2” inserts between pages 2 and 3. Use ranges like <b>3-6</b>.</p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){
+      root.setAttribute('data-theme',mode);
+      themeBtn.textContent = mode==='dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(mode==='dark'));
+      localStorage.setItem('nd-theme',mode);
+    }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.onclick=()=>setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+    const file = document.getElementById('file');
+    const drop = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const statusEl = document.getElementById('status');
+
+    const positionsEl = document.getElementById('positions');
+    const modeEls = [...document.querySelectorAll('input[name="mode"]')];
+    const countEl = document.getElementById('count');
+    const sizeSel = document.getElementById('sizeSel');
+    const everyNEl = document.getElementById('everyN');
+    const nLbl = document.getElementById('nLbl');
+
+    let pageCount = 0;
+
+    function setBadge(name,size){
+      if(!name){ badge.hidden = true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+
+    drop.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); file.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = '#9ab6ff'; });
+    });
+    ;['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = 'var(--border)'; });
+    });
+    drop.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type === 'application/pdf'){
+        file.files = e.dataTransfer.files;
+        file.dispatchEvent(new Event('change'));
+      }
+    });
+
+    file.addEventListener('change', async e=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      setBadge(f.name, f.size);
+      statusEl.textContent = 'Reading PDF…';
+      try{
+        const bytes = await f.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        pageCount = doc.getPageCount();
+        statusEl.textContent = `Loaded ${pageCount} page(s). Choose positions and press “Insert & Download”.`;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to read PDF.';
+      }
+    });
+
+    function parseRanges(str, max){
+      if(!str) return [];
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).forEach(t=>{
+        if(!t) return;
+        if(t.includes('-')){
+          const [aStr,bStr] = t.split('-');
+          const a = Number(aStr), b = Number(bStr);
+          if(Number.isFinite(a) && Number.isFinite(b) && a>=1 && b>=a){
+            for(let i=a;i<=b;i++) out.add(i);
+          }
+        }else{
+          const n = Number(t);
+          if(Number.isFinite(n) && n>=1) out.add(n);
+        }
+      });
+      return [...out].filter(n=>!max || n<=max).sort((a,b)=>a-b);
+    }
+
+    function sizeFromSelect(sel, neighborSize){
+      switch(sel){
+        case 'a4p': return { width:595, height:842 };
+        case 'a4l': return { width:842, height:595 };
+        case 'letp': return { width:612, height:792 };
+        case 'letl': return { width:792, height:612 };
+        case 'match':
+        default:     return neighborSize || { width:612, height:792 };
+      }
+    }
+
+    document.getElementById('chipStart').onclick = ()=>{
+      positionsEl.value = '1';
+      modeEls.find(r=>r.value==='before').checked = true;
+    };
+    document.getElementById('chipEnd').onclick = ()=>{
+      positionsEl.value = String(pageCount || '');
+      modeEls.find(r=>r.value==='after').checked = true;
+    };
+    document.getElementById('chipClear').onclick = ()=> positionsEl.value = '';
+    everyNEl.addEventListener('input', ()=> nLbl.textContent = Math.max(2, Number(everyNEl.value)||2));
+    document.getElementById('chipEvery').onclick = ()=>{
+      const n = Math.max(2, Number(everyNEl.value)||2);
+      if(!pageCount){ statusEl.textContent='Load a PDF first.'; return; }
+      const pages = [];
+      for(let i=n; i<=pageCount; i+=n) pages.push(i);
+      positionsEl.value = pages.join(',');
+      modeEls.find(r=>r.value==='after').checked = true;
+    };
+
+    document.getElementById('go').onclick = async ()=>{
+      const f = file.files?.[0];
+      if(!f){ statusEl.textContent = 'Choose a PDF first.'; return; }
+      const mode = (modeEls.find(r=>r.checked)||{}).value || 'after';
+      const perPos = Math.max(1, Number(countEl.value)||1);
+
+      let posNumbers = parseRanges(positionsEl.value, pageCount);
+      if(posNumbers.length===0){
+        statusEl.textContent = 'Enter at least one valid page number (e.g., 1,3-5).';
+        return;
+      }
+
+      statusEl.textContent = 'Inserting…';
+      try{
+        const bytes = await f.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+
+        const indices = posNumbers
+          .map(n => mode==='after' ? n : (n-1))     // 0-based insert index
+          .filter(i => Number.isFinite(i) && i>=0 && i<=doc.getPageCount())
+          .sort((a,b)=>b-a);                         // high → low so indices don’t shift
+
+        for(const idx of indices){
+          // choose neighbor to match size (if requested)
+          let neighborSize = null;
+          if (sizeSel.value === 'match' && doc.getPageCount() > 0){
+            const neighborIndex =
+              (mode==='after')
+                ? Math.min(Math.max(idx-1, 0), Math.max(0, doc.getPageCount()-1))
+                : Math.min(Math.max(idx,   0), Math.max(0, doc.getPageCount()-1));
+            const ref = doc.getPage(neighborIndex);
+            const s = ref.getSize ? ref.getSize() : { width:612, height:792 };
+            neighborSize = { width: s.width, height: s.height };
+          }
+          const blankSize = sizeFromSelect(sizeSel.value, neighborSize);
+          const w = Number(blankSize.width), h = Number(blankSize.height);
+
+          for(let k=0;k<perPos;k++){
+            // IMPORTANT: insertPage expects a PDFPage or a [width, height] tuple
+            if (Number.isFinite(w) && Number.isFinite(h)){
+              doc.insertPage(idx, [w, h]);
+            }
+          }
+        }
+
+        const outBytes = await doc.save();
+        const blob = new Blob([outBytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'with-blank-pages.pdf'; a.click();
+
+        statusEl.textContent = `Done. Inserted ${perPos} blank page(s) at ${posNumbers.join(', ')} (${mode}).`;
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Error: ' + (err?.message || err);
+      }
+    };
+  </script>
+</body>
+</html>

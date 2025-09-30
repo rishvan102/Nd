@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🔁 PDF → Images (ZIP) • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      color:#fff;font-weight:800;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.45rem .8rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    /* Card */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* Drop zone */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* Grid */
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:1fr 1fr}
+    @media (max-width:680px){ .two{grid-template-columns:1fr} }
+
+    label{display:flex;flex-direction:column;gap:6px}
+    .input{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+      background:var(--card); color:var(--ink); font-weight:600;
+    }
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+
+    .btn{
+      width:100%; border:1px solid var(--border); background:var(--card); color:var(--ink);
+      border-radius:12px; padding:.85rem 1rem; font-weight:800; cursor:pointer;
+    }
+    .btn.primary{
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      color:#fff; border-color:var(--brand);
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+    }
+    .btn[disabled]{opacity:.6; cursor:not-allowed}
+
+    /* Progress */
+    .progress{display:none;height:10px;border-radius:999px;overflow:hidden;
+      border:1px solid var(--border);background:color-mix(in oklab, var(--card), #000 6%);margin-top:.6rem}
+    .progress > span{display:block;height:100%;width:0%;
+      background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .12s ease}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:4px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🔁 PDF → Images (ZIP)</h1>
+          <p class="subtitle">Export each page as PNG, JPG, or WebP and download a single ZIP.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">We’ll render the selected pages to images</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <div class="grid two">
+        <label>Format
+          <select id="fmt" class="input">
+            <option value="png">PNG (lossless)</option>
+            <option value="jpeg">JPG (smaller)</option>
+            <option value="webp">WebP (modern)</option>
+          </select>
+        </label>
+        <label>Scale
+          <select id="scale" class="input">
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2" selected>2×</option>
+            <option value="3">3×</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label>Quality (0.30–0.95) <small class="subtitle">for JPG/WebP</small>
+          <input id="quality" type="number" class="input" step="0.05" min="0.3" max="0.95" value="0.92" />
+        </label>
+        <label>Base filename
+          <input id="basename" class="input" placeholder="page" value="page" />
+        </label>
+      </div>
+
+      <div class="grid two">
+        <label>Pages (optional)
+          <input id="pages" class="input" placeholder="e.g. 1-5,7,10  (empty = all)" />
+        </label>
+        <label>Actions
+          <div class="grid two" style="margin-top:2px">
+            <button id="go" class="btn primary">Export (ZIP)</button>
+            <button id="cancel" class="btn" disabled>Cancel</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="progress" id="bar"><span id="barIn"></span></div>
+      <p id="status" class="status" aria-live="polite">PDF not loaded yet.</p>
+      <p class="hint">Tip: Higher <b>Scale</b> = sharper images (larger files). Use <b>Pages</b> to export a subset.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- optional celebrate -->
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const savedTheme = localStorage.getItem('nd-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      root.setAttribute('data-theme', savedTheme);
+      themeBtn.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(savedTheme === 'dark'));
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('nd-theme', next);
+      themeBtn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(next === 'dark'));
+    });
+
+    /* ---------- Elements ---------- */
+    const fileEl = document.getElementById('file');
+    const dropZone = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const fmtEl = document.getElementById('fmt');
+    const scaleEl = document.getElementById('scale');
+    const qualityEl = document.getElementById('quality');
+    const basenameEl = document.getElementById('basename');
+    const pagesEl = document.getElementById('pages');
+    const goBtn = document.getElementById('go');
+    const cancelBtn = document.getElementById('cancel');
+    const bar = document.getElementById('bar');
+    const barIn = document.getElementById('barIn');
+    const statusEl = document.getElementById('status');
+
+    let pdfDoc = null;
+    let srcBytes = null;
+    let cancelFlag = false;
+    let pickedName = 'export.zip';
+
+    function status(msg, isErr=false){
+      statusEl.textContent = msg || '';
+      statusEl.style.color = isErr ? '#ef4343' : 'var(--muted)';
+    }
+    function setBadge(name,size){
+      if(!name){ badge.hidden=true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+    function setProgress(p){ // 0..1 or null
+      if (p == null || p <= 0 || p >= 1){ bar.style.display='none'; barIn.style.width='0%'; }
+      else { bar.style.display='block'; barIn.style.width = Math.round(p*100)+'%'; }
+    }
+
+    /* ---------- Drag & Drop ---------- */
+    dropZone.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fileEl.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='var(--border)'; });
+    });
+    dropZone.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type==='application/pdf'){
+        fileEl.files = e.dataTransfer.files;
+        fileEl.dispatchEvent(new Event('change'));
+      }
+    });
+
+    /* ---------- Load PDF ---------- */
+    fileEl.addEventListener('change', async (e)=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      setBadge(f.name, f.size);
+      status('Loading PDF…');
+      pickedName = (f.name?.replace(/\.pdf$/i,'') || 'export') + '.zip';
+      try{
+        srcBytes = await f.arrayBuffer();
+        pdfDoc = await pdfjsLib.getDocument({ data: srcBytes }).promise;
+        status(`Loaded ${pdfDoc.numPages} pages. Choose options and click “Export (ZIP)”.`);
+      }catch(err){
+        console.error(err);
+        status('Failed to load PDF.', true);
+      }
+    });
+
+    /* ---------- Helpers ---------- */
+    function parsePages(str, max){
+      if(!str) return Array.from({length:max}, (_,i)=>i+1);
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).forEach(tok=>{
+        if(!tok) return;
+        if(tok.includes('-')){
+          const [aStr,bStr]=tok.split('-');
+          const a=Number(aStr), b=Number(bStr);
+          if(Number.isFinite(a) && Number.isFinite(b) && a>=1 && b>=a){
+            for(let i=a;i<=b && i<=max;i++) out.add(i);
+          }
+        }else{
+          const n=Number(tok);
+          if(Number.isFinite(n) && n>=1 && n<=max) out.add(n);
+        }
+      });
+      const arr=[...out].sort((x,y)=>x-y);
+      return arr.length?arr:Array.from({length:max}, (_,i)=>i+1);
+    }
+
+    async function pageToBlob(page, scale, fmt, quality){
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: scale });
+      const c = (typeof OffscreenCanvas !== 'undefined')
+        ? new OffscreenCanvas(Math.ceil(vp.width), Math.ceil(vp.height))
+        : document.createElement('canvas');
+
+      c.width = Math.ceil(vp.width);
+      c.height = Math.ceil(vp.height);
+
+      const ctx = c.getContext('2d', { willReadFrequently:true });
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+      const type = fmt === 'jpeg' ? 'image/jpeg' : (fmt === 'webp' ? 'image/webp' : 'image/png');
+      const useQuality = (fmt === 'jpeg' || fmt === 'webp') ? quality : undefined;
+
+      if (c.convertToBlob) {
+        return await c.convertToBlob({ type, quality: useQuality });
+      } else {
+        // Fallback via toDataURL
+        const dataURL = (c).toDataURL(type, useQuality);
+        const res = await fetch(dataURL);
+        return await res.blob();
+      }
+    }
+
+    /* ---------- Export ---------- */
+    goBtn.addEventListener('click', async ()=>{
+      try{
+        if(!pdfDoc){ status('Choose a PDF first.', true); return; }
+        cancelFlag = false;
+        cancelBtn.disabled = false;
+        goBtn.disabled = true;
+        setProgress(0);
+        status('Rendering…');
+
+        const fmt = String(fmtEl.value || 'png');
+        const scale = Math.max(0.25, Number(scaleEl.value) || 1);
+        let quality = Number(qualityEl.value);
+        if (!Number.isFinite(quality)) quality = 0.92;
+        quality = Math.min(0.95, Math.max(0.3, quality));
+        const base = (basenameEl.value || 'page').trim() || 'page';
+
+        const total = pdfDoc.numPages;
+        const wanted = parsePages(pagesEl.value, total);
+        const zip = new JSZip();
+
+        for(let i=0;i<wanted.length;i++){
+          if (cancelFlag) throw new Error('Canceled');
+          const pageNum = wanted[i];
+          const page = await pdfDoc.getPage(pageNum);
+          const blob = await pageToBlob(page, scale, fmt, quality);
+          const name = `${base}-${String(pageNum).padStart(3,'0')}.${fmt==='jpeg'?'jpg':fmt}`;
+          zip.file(name, blob);
+          setProgress((i+1)/wanted.length);
+          status(`Rendered page ${pageNum} of ${total}…`);
+        }
+
+        status('Zipping…');
+        const out = await zip.generateAsync({ type:'blob' });
+        const url = URL.createObjectURL(out);
+        const a = document.createElement('a');
+        a.href = url; a.download = pickedName; a.click();
+
+        status('Done. Downloaded ZIP.');
+        setProgress(null);
+        cancelBtn.disabled = true;
+        goBtn.disabled = false;
+        window.showCelebration?.(url);
+      }catch(err){
+        if(String(err?.message).toLowerCase()==='canceled'){
+          status('Canceled by user.');
+        }else{
+          console.error(err);
+          status('Error: ' + (err?.message || err), true);
+        }
+        setProgress(null);
+        cancelBtn.disabled = true;
+        goBtn.disabled = false;
+      }
+    });
+
+    cancelBtn.addEventListener('click', ()=>{
+      cancelFlag = true;
+      cancelBtn.disabled = true;
+      status('Canceling…');
+    });
+  </script>
+</body>
+</html>

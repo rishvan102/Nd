@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>📷 Scan to PDF • NiceDay PDF Jar</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    #video { width:100%; max-width:640px; background:#000; border-radius:8px; }
+    #thumbs { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem; }
+    .thumb { position:relative; border:1px solid #ccc; border-radius:6px; overflow:hidden; }
+    .thumb img { width:120px; height:auto; display:block; }
+    .thumb button { position:absolute; top:4px; right:4px; background:#000a; color:#fff; border:0; border-radius:4px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <main class="tool-wrap">
+    <h1>📷 Scan to PDF</h1>
+    <p>Use your camera to capture pages. Reorder thumbnails, then export to PDF.</p>
+
+    <div class="tool-card">
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.5rem">
+        <button id="open">Open Camera</button>
+        <button id="snap">Take Snapshot</button>
+        <button id="close">Close Camera</button>
+        <button id="export">Export PDF</button>
+      </div>
+
+      <video id="video" autoplay playsinline></video>
+      <div id="thumbs"></div>
+      <p id="status" class="status"></p>
+    </div>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="scan.js"></script>
+  <script src="../assets/celebrate.js"></script>
+</body>
+</html>

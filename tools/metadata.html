@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>📝 PDF Metadata Editor • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip:#f2f5ff;
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      color:#fff;font-weight:800;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.45rem .8rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    /* Card */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* Drop zone */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:color-mix(in oklab, var(--card), #000 2%); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:color-mix(in oklab, var(--card), #000 2%);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* Form */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    @media (max-width:700px){ .grid{grid-template-columns:1fr} }
+    label{display:flex;flex-direction:column;gap:6px}
+    .input, .input-date{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+      background:var(--card); color:var(--ink); font-weight:600;
+    }
+    .input:focus, .input-date:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .chip{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.85rem;
+    }
+    .chip:hover{filter:brightness(1.02)}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .cta{
+      margin-top:12px; width:100%; padding:12px 14px; border:0; border-radius:12px;
+      color:#fff; font-weight:800; letter-spacing:.2px; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .cta:hover{filter:brightness(1.02)}
+    .cta:active{transform:translateY(1px)}
+
+    .note{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📝 PDF Metadata Editor</h1>
+          <p class="subtitle">View or change Title, Author, Subject, Keywords, and more.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <!-- Drop zone -->
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">We’ll read current metadata if available</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <!-- Form -->
+      <div id="metaForm" style="display:none; margin-top:1rem;">
+        <div class="grid">
+          <label>Title
+            <input id="title" class="input" placeholder="Document title" />
+          </label>
+          <label>Author
+            <input id="author" class="input" placeholder="Author name" />
+          </label>
+          <label>Subject
+            <input id="subject" class="input" placeholder="Short description" />
+          </label>
+          <label>Keywords (comma-separated)
+            <input id="keywords" class="input" placeholder="e.g., invoices, 2025, Q1" />
+          </label>
+          <label>Creator (software)
+            <input id="creator" class="input" placeholder="e.g., NiceDay PDF Jar" />
+          </label>
+          <label>Producer
+            <input id="producer" class="input" placeholder="e.g., pdf-lib" />
+          </label>
+          <label>Creation Date
+            <input id="cdate" type="datetime-local" class="input-date" />
+          </label>
+          <label>Modification Date
+            <input id="mdate" type="datetime-local" class="input-date" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btnClearForm" class="chip" type="button">Clear fields</button>
+          <button id="btnLoadNow" class="chip" type="button">Reload metadata</button>
+          <label class="chip" style="display:inline-flex; gap:8px; align-items:center;">
+            <input id="wipeAll" type="checkbox" />
+            Remove all existing metadata
+          </label>
+        </div>
+
+        <button id="saveBtn" class="cta">Save &amp; Download</button>
+        <p id="status" class="status" aria-live="polite">PDF loaded. Review and edit the fields above.</p>
+        <p class="note">Only the fields you set will be written. If “Remove all existing metadata” is checked, we’ll clear common info first, then set your new values.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- optional celebration (will no-op if missing) -->
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const savedTheme = localStorage.getItem('nd-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      root.setAttribute('data-theme', savedTheme);
+      themeBtn.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(savedTheme === 'dark'));
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('nd-theme', next);
+      themeBtn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(next === 'dark'));
+    });
+
+    /* ---------- Elements ---------- */
+    const fileEl = document.getElementById('file');
+    const dropZone = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const formWrap = document.getElementById('metaForm');
+    const statusEl = document.getElementById('status');
+
+    const fld = {
+      title: document.getElementById('title'),
+      author: document.getElementById('author'),
+      subject: document.getElementById('subject'),
+      keywords: document.getElementById('keywords'),
+      creator: document.getElementById('creator'),
+      producer: document.getElementById('producer'),
+      cdate: document.getElementById('cdate'),
+      mdate: document.getElementById('mdate'),
+      wipeAll: document.getElementById('wipeAll'),
+    };
+
+    let loadedBytes = null; // ArrayBuffer of the current file (for re-use)
+    let fileName = 'updated.pdf';
+
+    function setBadge(name, size){
+      if(!name){ badge.hidden = true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+
+    // Helpers for datetime-local <-> JS Date in local timezone
+    function toLocalDatetimeValue(date){
+      // date can be Date or number; convert to YYYY-MM-DDTHH:mm
+      if (!date) return '';
+      const d = (date instanceof Date) ? date : new Date(date);
+      const pad = n => String(n).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth()+1);
+      const dd = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mi = pad(d.getMinutes());
+      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    }
+    function fromLocalDatetimeValue(val){
+      if(!val) return null; // leave undefined if empty
+      // Treat as local time
+      return new Date(val);
+    }
+
+    /* ---------- Drag & Drop / Picker ---------- */
+    dropZone.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fileEl.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='var(--border)'; });
+    });
+    dropZone.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type==='application/pdf'){
+        fileEl.files = e.dataTransfer.files;
+        fileEl.dispatchEvent(new Event('change'));
+      }
+    });
+
+    fileEl.addEventListener('change', async (e)=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      setBadge(f.name, f.size);
+      fileName = (f.name?.replace(/\.pdf$/i,'') || 'updated') + '.pdf';
+      status('Loading PDF…');
+
+      try{
+        loadedBytes = await f.arrayBuffer();
+        await loadMetadata(loadedBytes);
+        formWrap.style.display = 'block';
+        status('PDF loaded. Review and edit the fields.');
+      }catch(err){
+        console.error(err);
+        status('Failed to load PDF.', true);
+      }
+    });
+
+    function status(msg, isErr=false){
+      if(!statusEl) return;
+      statusEl.textContent = msg || '';
+      statusEl.style.color = isErr ? '#ef4343' : 'var(--muted)';
+    }
+
+    /* ---------- Read current metadata ---------- */
+    async function loadMetadata(bytes){
+      // pdf-lib reads fields via getters; any may be undefined.
+      const doc = await PDFLib.PDFDocument.load(bytes);
+      // Try all getters; they return strings or undefined
+      const title = doc.getTitle?.() ?? '';
+      const author = doc.getAuthor?.() ?? '';
+      const subject = doc.getSubject?.() ?? '';
+      const keywords = doc.getKeywords?.() ?? '';
+      const creator = doc.getCreator?.() ?? '';
+      const producer = doc.getProducer?.() ?? '';
+      const cdate = doc.getCreationDate?.() ?? null;
+      const mdate = doc.getModificationDate?.() ?? null;
+
+      fld.title.value = title;
+      fld.author.value = author;
+      fld.subject.value = subject;
+      fld.keywords.value = Array.isArray(keywords) ? keywords.join(', ') : (keywords || '');
+      fld.creator.value = creator;
+      fld.producer.value = producer;
+      fld.cdate.value = cdate ? toLocalDatetimeValue(cdate) : '';
+      fld.mdate.value = mdate ? toLocalDatetimeValue(mdate) : '';
+    }
+
+    document.getElementById('btnLoadNow').addEventListener('click', async ()=>{
+      if(!loadedBytes){ status('Choose a PDF first.', true); return; }
+      status('Reloading metadata…');
+      try{
+        await loadMetadata(loadedBytes);
+        status('Reloaded current metadata from file.');
+      }catch(err){
+        console.error(err);
+        status('Could not reload metadata.', true);
+      }
+    });
+
+    document.getElementById('btnClearForm').addEventListener('click', ()=>{
+      fld.title.value = '';
+      fld.author.value = '';
+      fld.subject.value = '';
+      fld.keywords.value = '';
+      fld.creator.value = '';
+      fld.producer.value = '';
+      fld.cdate.value = '';
+      fld.mdate.value = '';
+      status('Cleared form fields (does not change the original file until you Save).');
+    });
+
+    /* ---------- Save (write metadata) ---------- */
+    document.getElementById('saveBtn').addEventListener('click', async ()=>{
+      if(!loadedBytes){ status('Choose a PDF first.', true); return; }
+      status('Updating metadata…');
+
+      try{
+        const src = await PDFLib.PDFDocument.load(loadedBytes);
+
+        // Optionally wipe common fields first
+        if (fld.wipeAll.checked){
+          // Clearing by setting empty/undefined
+          try{ src.setTitle(''); }catch{}
+          try{ src.setAuthor(''); }catch{}
+          try{ src.setSubject(''); }catch{}
+          try{ src.setKeywords([]); }catch{}
+          try{ src.setProducer(''); }catch{}
+          try{ src.setCreator(''); }catch{}
+          try{ src.setCreationDate(undefined); }catch{}
+          try{ src.setModificationDate(undefined); }catch{}
+        }
+
+        // Only set fields if user provided values (so you can leave any blank)
+        const T = fld.title.value.trim();         if (T) src.setTitle(T);
+        const A = fld.author.value.trim();        if (A) src.setAuthor(A);
+        const S = fld.subject.value.trim();       if (S) src.setSubject(S);
+        const K = fld.keywords.value.trim();
+        if (K){
+          // Accept either comma-separated or space-separated
+          const arr = K.split(',').map(s=>s.trim()).filter(Boolean);
+          if (arr.length){ src.setKeywords(arr); }
+        }
+        const C = fld.creator.value.trim();       if (C) src.setCreator(C);
+        const P = fld.producer.value.trim();      if (P) src.setProducer(P);
+
+        const CD = fromLocalDatetimeValue(fld.cdate.value);
+        if (CD instanceof Date && !isNaN(+CD)) src.setCreationDate(CD);
+        const MD = fromLocalDatetimeValue(fld.mdate.value);
+        if (MD instanceof Date && !isNaN(+MD)) src.setModificationDate(MD);
+
+        const outBytes = await src.save();
+        const blob = new Blob([outBytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+
+        status('Saved. Downloaded ' + fileName);
+        window.showCelebration?.(url); // if celebrate.js is present
+      }catch(err){
+        console.error(err);
+        status('Error: ' + (err?.message||err), true);
+      }
+    });
+  </script>
+</body>
+</html>

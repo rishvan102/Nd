@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🔢 Add Page Numbers • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      color:#fff;font-weight:800;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.45rem .8rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    /* Card */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* Drop zone */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* Form grid */
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:1fr 1fr}
+    .three{grid-template-columns:1fr 1fr 1fr}
+    @media (max-width:760px){ .two,.three{grid-template-columns:1fr} }
+
+    label{display:flex;flex-direction:column;gap:6px}
+    .input{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+      background:var(--card); color:var(--ink); font-weight:600;
+    }
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+    .chip{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.85rem;
+    }
+    .chip:hover{filter:brightness(1.02)}
+
+    /* CTA */
+    .cta{
+      margin-top:12px; width:100%; padding:12px 14px; border:0; border-radius:12px;
+      color:#fff; font-weight:800; letter-spacing:.2px; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .cta:hover{filter:brightness(1.02)}
+    .cta:active{transform:translateY(1px)}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:4px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🔢 Add Page Numbers</h1>
+          <p class="subtitle">Choose position, margins, style & what pages to number.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <!-- Upload -->
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">Numbers apply to all chosen pages</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <!-- Options -->
+      <div class="grid three">
+        <label>Position
+          <select id="pos" class="input">
+            <option value="br">Bottom Right</option>
+            <option value="bc">Bottom Center</option>
+            <option value="bl">Bottom Left</option>
+            <option value="tr">Top Right</option>
+            <option value="tc">Top Center</option>
+            <option value="tl">Top Left</option>
+          </select>
+        </label>
+        <label>Margin (pt)
+          <input id="margin" type="number" class="input" min="0" value="24" />
+        </label>
+        <label>Start at
+          <input id="startAt" type="number" class="input" min="1" value="1" />
+        </label>
+      </div>
+
+      <div class="grid three">
+        <label>Font
+          <select id="fontName" class="input">
+            <option value="Helvetica">Helvetica</option>
+            <option value="TimesRoman">Times</option>
+            <option value="Courier">Courier</option>
+          </select>
+        </label>
+        <label>Font size
+          <input id="fontSize" type="number" class="input" min="6" max="72" value="10" />
+        </label>
+        <label>Color
+          <input id="color" type="color" class="input" value="#222222" />
+        </label>
+      </div>
+
+      <div class="grid three">
+        <label>Opacity (0–1)
+          <input id="opacity" type="number" step="0.05" min="0" max="1" class="input" value="1" />
+        </label>
+        <label>Prefix
+          <input id="prefix" class="input" placeholder="e.g. Page " />
+        </label>
+        <label>Suffix
+          <input id="suffix" class="input" placeholder="" />
+        </label>
+      </div>
+
+      <div class="row" role="group" aria-label="Page targeting">
+        <label class="chip"><input id="skipFirst" type="checkbox" /> Skip first page</label>
+        <label class="chip"><input id="onlyOdd" type="checkbox" /> Odd pages only</label>
+        <label class="chip"><input id="onlyEven" type="checkbox" /> Even pages only</label>
+        <label class="chip"><input id="showTotal" type="checkbox" /> Use “X of Y”</label>
+        <label class="chip"><input id="outline" type="checkbox" /> Add thin outline for contrast</label>
+      </div>
+
+      <button id="go" class="cta">Number &amp; Download</button>
+      <p id="status" class="status" aria-live="polite">PDF not loaded yet.</p>
+      <p class="hint">72 points = 1 inch. Coordinates are rotation-aware, so text stays in the chosen corner even on rotated pages.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- optional celebration (safe to omit) -->
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const savedTheme = localStorage.getItem('nd-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      root.setAttribute('data-theme', savedTheme);
+      themeBtn.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(savedTheme === 'dark'));
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('nd-theme', next);
+      themeBtn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(next === 'dark'));
+    });
+
+    /* ---------- Elements ---------- */
+    const fileEl = document.getElementById('file');
+    const dropZone = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const statusEl = document.getElementById('status');
+
+    const posEl = document.getElementById('pos');
+    const marginEl = document.getElementById('margin');
+    const startAtEl = document.getElementById('startAt');
+    const fontNameEl = document.getElementById('fontName');
+    const fontSizeEl = document.getElementById('fontSize');
+    const colorEl = document.getElementById('color');
+    const opacityEl = document.getElementById('opacity');
+    const prefixEl = document.getElementById('prefix');
+    const suffixEl = document.getElementById('suffix');
+
+    const skipFirstEl = document.getElementById('skipFirst');
+    const onlyOddEl = document.getElementById('onlyOdd');
+    const onlyEvenEl = document.getElementById('onlyEven');
+    const showTotalEl = document.getElementById('showTotal');
+    const outlineEl = document.getElementById('outline');
+
+    let loadedBytes = null;
+    let fileName = 'numbered.pdf';
+
+    function status(msg, isErr=false){
+      statusEl.textContent = msg || '';
+      statusEl.style.color = isErr ? '#ef4343' : 'var(--muted)';
+    }
+    function setBadge(name,size){
+      if(!name){ badge.hidden=true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+
+    /* ---------- Drag & Drop ---------- */
+    dropZone.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fileEl.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      dropZone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='var(--border)'; });
+    });
+    dropZone.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type==='application/pdf'){
+        fileEl.files = e.dataTransfer.files;
+        fileEl.dispatchEvent(new Event('change'));
+      }
+    });
+
+    fileEl.addEventListener('change', async (e)=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      setBadge(f.name, f.size);
+      fileName = (f.name?.replace(/\.pdf$/i,'') || 'numbered') + '.pdf';
+      status('File loaded. Set your options and click “Number & Download”.');
+      loadedBytes = await f.arrayBuffer();
+    });
+
+    /* ---------- Helpers ---------- */
+    function hexToRgb(hex){
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if(!m) return { r:0, g:0, b:0 };
+      return { r:parseInt(m[1],16)/255, g:parseInt(m[2],16)/255, b:parseInt(m[3],16)/255 };
+    }
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    /* ---------- Do it ---------- */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      try{
+        if(!loadedBytes){ status('Choose a PDF first.', true); return; }
+
+        // Read options (with guards)
+        const margin = Math.max(0, Number(marginEl.value)||0);
+        const startAt = Math.max(1, Number(startAtEl.value)||1);
+        const fontSize = clamp(Number(fontSizeEl.value)||10, 6, 200);
+        const { r, g, b } = hexToRgb(colorEl.value || '#000000');
+        const opacity = clamp(Number(opacityEl.value)||1, 0, 1);
+        const prefix = String(prefixEl.value||'');
+        const suffix = String(suffixEl.value||'');
+        const pos = String(posEl.value||'br');
+
+        const skipFirst = !!skipFirstEl.checked;
+        const onlyOdd = !!onlyOddEl.checked;
+        const onlyEven = !!onlyEvenEl.checked;
+        const showTotal = !!showTotalEl.checked;
+        const addOutline = !!outlineEl.checked;
+
+        status('Numbering…');
+
+        const src = await PDFLib.PDFDocument.load(loadedBytes);
+        const fontRef = await src.embedStandardFont(fontNameEl.value || 'Helvetica');
+
+        const total = src.getPageCount();
+        let counter = startAt;
+
+        for(let i=0;i<total;i++){
+          const page = src.getPage(i);
+
+          // Skip rules
+          const pageNumHuman = i+1;
+          if (skipFirst && pageNumHuman === 1) continue;
+          if (onlyOdd && pageNumHuman % 2 === 0) continue;
+          if (onlyEven && pageNumHuman % 2 === 1) continue;
+
+          // Size (rotation-aware): pdf-lib exposes width/height already respecting rotation
+          const W = page.getWidth?.() ?? page.getSize().width;
+          const H = page.getHeight?.() ?? page.getSize().height;
+
+          // Compose text
+          const numText = showTotal ? `${prefix}${counter} of ${total}${suffix}` : `${prefix}${counter}${suffix}`;
+
+          // Measure text width to align center/right
+          const textWidth = fontRef.widthOfTextAtSize(numText, fontSize);
+          const textHeight = fontSize; // good enough for baseline offset
+
+          // Coordinates per corner
+          let x = margin, y = margin;
+          switch(pos){
+            case 'tl': x = margin; y = H - margin - textHeight; break;
+            case 'tc': x = (W - textWidth)/2; y = H - margin - textHeight; break;
+            case 'tr': x = W - margin - textWidth; y = H - margin - textHeight; break;
+            case 'bl': x = margin; y = margin; break;
+            case 'bc': x = (W - textWidth)/2; y = margin; break;
+            case 'br': default: x = W - margin - textWidth; y = margin; break;
+          }
+          x = clamp(x, 0, Math.max(0, W - textWidth));
+          y = clamp(y, 0, Math.max(0, H - textHeight));
+
+          // Optional tiny outline for contrast (draw same text slightly bigger & darker underneath)
+          if (addOutline){
+            const outlineColor = PDFLib.rgb(0,0,0);
+            const delta = Math.max(0.25, fontSize*0.05);
+            page.drawText(numText, {
+              x: x - 0.2, y: y - 0.2,
+              size: fontSize + delta*0.4,
+              font: fontRef,
+              color: outlineColor,
+              opacity: Math.min(1, opacity*0.85),
+            });
+          }
+
+          // Main text
+          page.drawText(numText, {
+            x, y, size: fontSize, font: fontRef,
+            color: PDFLib.rgb(r,g,b),
+            opacity,
+          });
+
+          counter++;
+        }
+
+        const out = await src.save();
+        const blob = new Blob([out], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName.replace(/\.pdf$/i,'') + '_numbered.pdf'; a.click();
+
+        status('Done. Downloaded numbered PDF.');
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        status('Error: ' + (err?.message || err), true);
+      }
+    });
+  </script>
+</body>
+</html>

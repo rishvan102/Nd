@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Text/Markdown → PDF • NiceDay PDF Jar</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="tool-wrap">
+    <h1>📄 Text/Markdown → PDF</h1>
+    <p>Upload one or more <code>.txt</code>/<code>.md</code> files. Each file becomes a section.</p>
+
+    <div class="tool-card">
+      <label>Files
+        <input id="files" type="file" accept=".txt,.md,text/plain,text/markdown" multiple />
+      </label>
+
+      <div class="grid two" style="margin-top:.75rem">
+        <label>Document Title (optional)
+          <input id="docTitle" class="input" placeholder="My Notes" />
+        </label>
+        <label>Output filename
+          <input id="outName" class="input" value="notes.pdf" />
+        </label>
+      </div>
+
+      <div class="grid three" style="margin-top:.5rem">
+        <label>Font
+          <select id="font" class="input">
+            <option value="Helvetica" selected>Helvetica</option>
+            <option value="Times">Times</option>
+            <option value="Courier">Courier</option>
+          </select>
+        </label>
+        <label>Body size
+          <input id="fontSize" type="number" class="input" value="11" />
+        </label>
+        <label>Margins (pt)
+          <input id="margin" type="number" class="input" value="36" />
+        </label>
+      </div>
+
+      <div class="grid two" style="margin-top:.5rem">
+        <label><input id="pageBreaks" type="checkbox" checked /> Page break between files</label>
+        <label><input id="useMdHeadings" type="checkbox" checked /> Treat <code>#</code> headings as larger text</label>
+      </div>
+
+      <button id="go" style="margin-top:.75rem">Create PDF</button>
+      <p id="status" class="status"></p>
+      <p class="hint">Tip: 72 pt = 1 inch. A4 is ~595×842 pt. Filenames become section headers.</p>
+    </div>
+  </main>
+
+  <!-- jsPDF (client-side only) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="txt2pdf.js"></script>
+  <script src="../assets/celebrate.js"></script>
+</body>
+</html>

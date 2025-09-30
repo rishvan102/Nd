@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🖼️ Images → PDF • NiceDay PDF Jar</title>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#fff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui}
+    .wrap{max-width:880px;margin:22px auto 40px;padding:0 16px}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .title h1{margin:0;font-size:20px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    .drop{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:18px;border:2px dashed var(--border);border-radius:14px;cursor:pointer;text-align:center;background:var(--chip)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    #imgInput{display:none}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .chip{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:999px;font-weight:600;cursor:pointer;font-size:.9rem}
+    .chip:hover{filter:brightness(1.03)}
+
+    .nameRow{display:flex;gap:10px;align-items:center;margin-top:10px}
+    .input{flex:1 1 auto;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--ink)}
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+
+    .preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
+    .thumb{position:relative;border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden}
+    .thumb img{width:100%;height:150px;object-fit:cover;display:block}
+    .thumb .badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:2px 6px;border-radius:999px}
+    .thumb .remove{position:absolute;top:6px;right:6px;background:rgba(239,68,68,.9);color:#fff;border:0;border-radius:999px;width:22px;height:22px;cursor:pointer;font-weight:800;line-height:22px}
+    .thumb .edit{position:absolute;bottom:6px;right:6px;background:rgba(37,99,235,.95);color:#fff;border:0;border-radius:999px;width:28px;height:28px;cursor:pointer;font-weight:800}
+    .thumb[draggable="true"]{cursor:grab}
+    .thumb.dragging{opacity:.6;transform:scale(.98)}
+    .thumb.drop-target{outline:2px dashed var(--brand);outline-offset:-6px}
+
+    .btn{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;background:linear-gradient(90deg,var(--brand),var(--brand-2));cursor:pointer}
+    .btn:hover{filter:brightness(1.05)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+
+    /* Editor modal */
+    .modalBack{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:999}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);max-width:920px;width:95%;padding:14px;display:grid;gap:12px}
+    .editor{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+    @media(max-width:820px){ .editor{grid-template-columns:1fr} }
+    .stageWrap{border:1px dashed var(--border);border-radius:12px;background:var(--chip);padding:10px}
+    .stage{position:relative;width:100%;aspect-ratio:595/842;background:#fff;border-radius:8px;overflow:hidden;touch-action:none}
+    .stage canvas{width:100%;height:100%;display:block}
+    .panel{display:grid;gap:10px}
+    .panel .row{display:flex;gap:10px;flex-wrap:wrap}
+    .panel label{font-size:.9rem;color:var(--muted)}
+    .panel input[type=range]{width:100%}
+    .panel .gridBtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .panel .gridBtns .chip{padding:6px 8px;text-align:center}
+
+    /* Celebration popup reused from previous answer */
+    .popBack{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:998}
+    .pop{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);max-width:520px;width:92%;padding:18px 18px 20px; overflow:hidden}
+    .pop h3{margin:0 0 6px}
+    .pop p{margin:6px 0 12px;color:var(--muted)}
+    .popRow{display:flex;gap:10px;justify-content:flex-end}
+    .popCanvas{position:absolute;inset:0;border-radius:16px;pointer-events:none;z-index:0}
+    .pop h3,.pop p,.popRow{position:relative;z-index:1}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div class="logo">ND</div>
+      <div class="title"><h1>🖼️ Images → PDF</h1></div>
+      <button id="themeBtn" class="themeBtn">🌙 Dark</button>
+    </div>
+
+    <section class="card">
+      <label for="imgInput" class="drop" id="dropZone" tabindex="0" aria-label="Drop your images here or click to choose">
+        <div>📤 <strong>Drop your images here or click to choose</strong></div>
+        <div class="status">Supports JPG, PNG, GIF, BMP, WebP, TIFF, HEIC, ICO…</div>
+      </label>
+      <input id="imgInput" type="file" multiple />
+
+      <div class="row">
+        <button class="chip" id="sortAZ">Sort A → Z</button>
+        <button class="chip" id="sortZA">Sort Z → A</button>
+        <button class="chip" id="reverse">Reverse</button>
+        <button class="chip" id="clearAll">Clear all</button>
+      </div>
+
+      <div class="nameRow">
+        <label for="pdfName" style="font-weight:700">File name</label>
+        <input id="pdfName" class="input" value="images.pdf" />
+      </div>
+
+      <div class="preview" id="preview"></div>
+
+      <button id="go" class="btn">Create PDF & Download</button>
+      <p id="status" class="status">No images selected.</p>
+    </section>
+  </main>
+
+  <!-- Position Editor Modal -->
+  <div id="editBack" class="modalBack" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="modal">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h3 id="editTitle" style="margin:0">Position & Alignment</h3>
+        <button id="editClose" class="chip">Close</button>
+      </div>
+      <div class="editor">
+        <div class="stageWrap">
+          <div class="stage"><canvas id="stage"></canvas></div>
+          <div class="status" id="editHint">Drag the image to move. Use wheel/slider to zoom.</div>
+        </div>
+        <div class="panel">
+          <div>
+            <label>Fit mode</label>
+            <div class="row">
+              <button class="chip" data-fit="contain">Contain</button>
+              <button class="chip" data-fit="cover">Cover</button>
+            </div>
+          </div>
+          <div>
+            <label>Rotate</label>
+            <div class="row">
+              <button class="chip" data-rot="0">0°</button>
+              <button class="chip" data-rot="90">90°</button>
+              <button class="chip" data-rot="180">180°</button>
+              <button class="chip" data-rot="270">270°</button>
+            </div>
+          </div>
+          <div>
+            <label>Align</label>
+            <div class="gridBtns">
+              <button class="chip" data-align="top-left">↖</button>
+              <button class="chip" data-align="top">↑</button>
+              <button class="chip" data-align="top-right">↗</button>
+              <button class="chip" data-align="left">←</button>
+              <button class="chip" data-align="center">•</button>
+              <button class="chip" data-align="right">→</button>
+              <button class="chip" data-align="bottom-left">↙</button>
+              <button class="chip" data-align="bottom">↓</button>
+              <button class="chip" data-align="bottom-right">↘</button>
+            </div>
+          </div>
+          <div>
+            <label>Zoom</label>
+            <input id="zoomRange" type="range" min="0.5" max="2" step="0.01" value="1">
+          </div>
+          <div>
+            <label>Margin (pt)</label>
+            <input id="marginRange" type="range" min="0" max="72" step="2" value="24">
+          </div>
+          <div class="row">
+            <button id="editApply" class="btn" style="margin:0">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Celebration popup -->
+  <div id="celeBack" class="popBack" role="dialog" aria-modal="true" aria-labelledby="celeTitle">
+    <div class="pop">
+      <canvas id="celeFx" class="popCanvas"></canvas>
+      <h3 id="celeTitle">PDF ready! 🎉</h3>
+      <p id="celeQuote">Small steps add up to big wins.</p>
+      <div class="popRow">
+        <button id="celeClose" class="chip">Close</button>
+        <a id="celeDl" class="chip" href="#" download="images.pdf" style="color:#fff;background:linear-gradient(90deg,var(--brand),var(--brand-2));border:0">Download again</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script>
+    /* ---------- Theme ---------- */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){root.setAttribute('data-theme',mode);themeBtn.textContent=mode==='dark'?'☀️ Light':'🌙 Dark';localStorage.setItem('nd-theme',mode);}
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.onclick=()=>setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+
+    /* ---------- State ---------- */
+    const input = document.getElementById('imgInput');
+    const drop = document.getElementById('dropZone');
+    const preview = document.getElementById('preview');
+    const statusEl = document.getElementById('status');
+    const pdfNameEl = document.getElementById('pdfName');
+
+    // Each item keeps placement settings used at export time
+    // fit: 'contain'|'cover'; rot: 0|90|180|270; scale: 0.5..2 (multiplier); offsetX/Y: px; margin: pt
+    let files = []; // [{file, name, id, fit, rot, scale, offsetX, offsetY, margin}]
+    const isImage = f => f && (f.type.startsWith('image/') || /\.(apng|avif|bmp|gif|heic|heif|ico|jfif|jpg|jpeg|png|tif|tiff|webp)$/i.test(f.name));
+    const uid = ()=>Math.random().toString(36).slice(2,9);
+    function updateStatus(){ statusEl.textContent = files.length ? `${files.length} image(s). Click a thumbnail to edit alignment; drag to reorder.` : 'No images selected.'; }
+
+    function addFileList(list){
+      const arr = [...list].filter(isImage).map(f=>({
+        file:f, name:f.name, id:uid(),
+        fit:'contain', rot:0, scale:1, offsetX:0, offsetY:0, margin:24
+      }));
+      if(!arr.length) return;
+      files = files.concat(arr);
+      renderList();
+    }
+
+    /* ---------- UI: add, sort, clear ---------- */
+    input.addEventListener('change', e=>{ addFileList(e.target.files); input.value=''; });
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.borderColor='#9ab6ff'; });
+    drop.addEventListener('dragleave', ()=>{ drop.style.borderColor='var(--border)'; });
+    drop.addEventListener('drop', e=>{ e.preventDefault(); drop.style.borderColor='var(--border)'; addFileList(e.dataTransfer.files); });
+    drop.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); input.click(); } });
+
+    document.getElementById('sortAZ').onclick = ()=>{ files.sort((a,b)=>a.name.localeCompare(b.name)); renderList(); };
+    document.getElementById('sortZA').onclick = ()=>{ files.sort((a,b)=>b.name.localeCompare(a.name)); renderList(); };
+    document.getElementById('reverse').onclick = ()=>{ files.reverse(); renderList(); };
+    document.getElementById('clearAll').onclick = ()=>{ files=[]; renderList(); };
+
+    /* ---------- Thumbnails / reorder / edit ---------- */
+    function renderList(){
+      preview.innerHTML='';
+      files.forEach((item,idx)=>{
+        const url = URL.createObjectURL(item.file);
+        const div = document.createElement('div'); div.className='thumb'; div.draggable=true; div.dataset.id=item.id;
+        div.innerHTML = `
+          <span class="badge">${idx+1}</span>
+          <button class="remove" title="Remove">✖</button>
+          <button class="edit" title="Edit">✎</button>
+          <img alt="${item.name}">
+        `;
+        div.querySelector('img').src = url;
+        preview.appendChild(div);
+      });
+      attachDnD();
+      updateStatus();
+    }
+
+    preview.addEventListener('click', e=>{
+      const card = e.target.closest('.thumb'); if(!card) return;
+      const id = card.dataset.id;
+      if(e.target.classList.contains('remove')){
+        files = files.filter(x=>x.id!==id); renderList(); return;
+      }
+      if(e.target.classList.contains('edit') || e.target.tagName==='IMG'){
+        openEditor(id);
+      }
+    });
+
+    function attachDnD(){
+      let dragId=null, overId=null;
+      preview.querySelectorAll('.thumb').forEach(el=>{
+        el.addEventListener('dragstart', ()=>{ dragId = el.dataset.id; el.classList.add('dragging'); });
+        el.addEventListener('dragend',   ()=>{ el.classList.remove('dragging'); preview.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target')); dragId=null; overId=null; });
+        el.addEventListener('dragover',  e=>{ e.preventDefault(); overId = el.dataset.id; preview.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target')); el.classList.add('drop-target'); });
+        el.addEventListener('drop',      e=>{
+          e.preventDefault();
+          const from = files.findIndex(x=>x.id===dragId);
+          const to   = files.findIndex(x=>x.id===overId);
+          if(from>-1 && to>-1 && from!==to){
+            const [moved] = files.splice(from,1);
+            files.splice(to,0,moved);
+            renderList();
+          }
+        });
+      });
+    }
+
+    /* ---------- Position editor ---------- */
+    const editBack = document.getElementById('editBack');
+    const editClose= document.getElementById('editClose');
+    const stageCanvas = document.getElementById('stage');
+    const zoomRange = document.getElementById('zoomRange');
+    const marginRange = document.getElementById('marginRange');
+    let editItem = null, stageCtx=null, imgObj=null, dragging=false, lastX=0,lastY=0;
+
+    function openEditor(id){
+      editItem = files.find(x=>x.id===id);
+      if(!editItem) return;
+      // setup canvas to A4 aspect
+      const w = stageCanvas.clientWidth || 600;
+      stageCanvas.width = 595; stageCanvas.height = 842; // PDF points A4 portrait
+      stageCtx = stageCanvas.getContext('2d');
+
+      zoomRange.value = String(editItem.scale);
+      marginRange.value = String(editItem.margin);
+
+      // load image
+      imgObj = new Image();
+      imgObj.onload = ()=>{ drawStage(); };
+      imgObj.src = URL.createObjectURL(editItem.file);
+
+      // wire buttons
+      document.querySelectorAll('[data-fit]').forEach(b=> b.onclick = ()=>{ editItem.fit=b.dataset.fit; drawStage(); });
+      document.querySelectorAll('[data-rot]').forEach(b=> b.onclick = ()=>{ editItem.rot=Number(b.dataset.rot); drawStage(); });
+      document.querySelectorAll('[data-align]').forEach(b=> b.onclick = ()=>{ alignTo(b.dataset.align); drawStage(); });
+
+      zoomRange.oninput = ()=>{ editItem.scale = Number(zoomRange.value); drawStage(); };
+      marginRange.oninput = ()=>{ editItem.margin = Number(marginRange.value); drawStage(); };
+
+      // Drag to move
+      stageCanvas.onpointerdown = e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; stageCanvas.setPointerCapture(e.pointerId); };
+      stageCanvas.onpointermove = e=>{
+        if(!dragging) return;
+        const dx = e.clientX-lastX, dy=e.clientY-lastY;
+        editItem.offsetX += dx; editItem.offsetY += dy;
+        lastX=e.clientX; lastY=e.clientY; drawStage();
+      };
+      stageCanvas.onpointerup = ()=> dragging=false;
+      stageCanvas.onwheel = e=>{ e.preventDefault(); const s=Math.max(.5, Math.min(2, editItem.scale + (e.deltaY<0?0.05:-0.05))); editItem.scale=s; zoomRange.value=String(s); drawStage(); };
+
+      document.getElementById('editApply').onclick = ()=>{ editBack.style.display='none'; };
+      editClose.onclick = ()=>{ editBack.style.display='none'; };
+
+      editBack.style.display='grid';
+    }
+
+    function degToRad(d){ return d*Math.PI/180; }
+
+    function drawStage(){
+      const ctx = stageCtx; if(!ctx || !imgObj || !editItem) return;
+      const W = stageCanvas.width, H = stageCanvas.height;
+      ctx.clearRect(0,0,W,H);
+      // draw page area
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+
+      const margin = editItem.margin;
+      const availW = W - 2*margin, availH = H - 2*margin;
+
+      // original image size after rotation swap
+      const rot = (editItem.rot%360+360)%360;
+      const imgW0 = (rot===90||rot===270)? imgObj.height : imgObj.width;
+      const imgH0 = (rot===90||rot===270)? imgObj.width  : imgObj.height;
+
+      const fitScale = editItem.fit==='cover'
+        ? Math.max(availW/imgW0, availH/imgH0)
+        : Math.min(availW/imgW0, availH/imgH0);
+
+      const scale = fitScale * editItem.scale;
+      const drawW = imgW0*scale, drawH = imgH0*scale;
+
+      const cx = margin + (availW - drawW)/2 + editItem.offsetX;
+      const cy = margin + (availH - drawH)/2 + editItem.offsetY;
+
+      // draw border for content area
+      ctx.strokeStyle = '#d1d5db'; ctx.setLineDash([6,4]); ctx.strokeRect(margin, margin, availW, availH); ctx.setLineDash([]);
+
+      ctx.save();
+      // translate to center of drawn rect to rotate
+      ctx.translate(cx+drawW/2, cy+drawH/2);
+      ctx.rotate(degToRad(rot));
+      // draw image centered back
+      const dw = (rot===90||rot===270)? drawH : drawW;
+      const dh = (rot===90||rot===270)? drawW : drawH;
+      ctx.drawImage(imgObj, -dw/2, -dh/2, dw, dh);
+      ctx.restore();
+    }
+
+    function alignTo(where){
+      if(!editItem || !imgObj) return;
+      // compute current sizes (same as in draw)
+      const W = stageCanvas.width, H = stageCanvas.height;
+      const margin = editItem.margin;
+      const availW = W - 2*margin, availH = H - 2*margin;
+      const rot = (editItem.rot%360+360)%360;
+      const imgW0 = (rot===90||rot===270)? imgObj.height : imgObj.width;
+      const imgH0 = (rot===90||rot===270)? imgObj.width  : imgObj.height;
+      const fitScale = editItem.fit==='cover' ? Math.max(availW/imgW0, availH/imgH0) : Math.min(availW/imgW0, availH/imgH0);
+      const scale = fitScale * editItem.scale;
+      const drawW = imgW0*scale, drawH = imgH0*scale;
+
+      const dxCenter = 0;
+      const dyCenter = 0;
+      const dxLeft  = - (availW - drawW)/2;
+      const dxRight = + (availW - drawW)/2;
+      const dyTop   = - (availH - drawH)/2;
+      const dyBottom= + (availH - drawH)/2;
+
+      const map = {
+        'center':[dxCenter,dyCenter],
+        'left':[dxLeft,dyCenter],
+        'right':[dxRight,dyCenter],
+        'top':[dxCenter,dyTop],
+        'bottom':[dxCenter,dyBottom],
+        'top-left':[dxLeft,dyTop],
+        'top-right':[dxRight,dyTop],
+        'bottom-left':[dxLeft,dyBottom],
+        'bottom-right':[dxRight,dyBottom],
+      };
+      const [ox,oy] = map[where] || [0,0];
+      editItem.offsetX = ox; editItem.offsetY = oy;
+    }
+
+    /* ---------- Export PDF ---------- */
+    document.getElementById('go').onclick = async ()=>{
+      if(!files.length){ statusEl.textContent='Select images first.'; return; }
+      statusEl.textContent='Building PDF… (keep this tab active)';
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({unit:'pt', format:'a4'}); // 595x842
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      let first = true;
+      for (const it of files) {
+        const buf = await it.file.arrayBuffer();
+        const img = new Image();
+        await new Promise(res=>{ img.onload=res; img.src = URL.createObjectURL(new Blob([buf])); });
+
+        // Rotate-aware original
+        const rot = (it.rot%360+360)%360;
+        const imgW0 = (rot===90||rot===270)? img.height : img.width;
+        const imgH0 = (rot===90||rot===270)? img.width  : img.height;
+
+        const margin = it.margin;
+        const availW = pageW - 2*margin, availH = pageH - 2*margin;
+
+        const fitScale = it.fit==='cover' ? Math.max(availW/imgW0, availH/imgH0) : Math.min(availW/imgW0, availH/imgH0);
+        const scale = fitScale * it.scale;
+        const drawW = imgW0*scale, drawH = imgH0*scale;
+
+        const x = margin + (availW - drawW)/2 + it.offsetX;
+        const y = margin + (availH - drawH)/2 + it.offsetY;
+
+        if(!first) pdf.addPage();
+        // jsPDF rotation parameter is clockwise degrees
+        pdf.addImage(img, 'JPEG', x, y, drawW, drawH, undefined, 'FAST', rot);
+        first=false;
+      }
+
+      const blob = pdf.output('blob');
+      const name = (pdfNameEl.value || 'images.pdf').trim() || 'images.pdf';
+      const url = URL.createObjectURL(blob);
+
+      const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+      showCelebration(url, name);
+      statusEl.textContent=`Done. Downloaded ${name}`;
+    };
+
+    /* ---------- Celebration ---------- */
+    const celeBack = document.getElementById('celeBack'),
+          celeFx   = document.getElementById('celeFx'),
+          celeDl   = document.getElementById('celeDl'),
+          celeClose= document.getElementById('celeClose');
+    const QUOTES = [
+      "Small steps add up to big wins.",
+      "Done is better than perfect.",
+      "Clean docs, clear mind.",
+      "Nice! Your PDF is ready.",
+      "Less noise, more focus."
+    ];
+    function showCelebration(href, name){
+      celeDl.href = href; celeDl.download = name || 'images.pdf';
+      document.getElementById('celeQuote').textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+      celeBack.style.display='flex'; startFireworks();
+    }
+    celeClose.onclick = ()=>{ celeBack.style.display='none'; stopFireworks(); };
+    celeBack.addEventListener('click', e=>{ if(e.target===celeBack){ celeBack.style.display='none'; stopFireworks(); } });
+
+    let fxRAF=null, particles=[];
+    function resizeFx(){ const box=celeBack.querySelector('.pop').getBoundingClientRect(); celeFx.width=box.width|0; celeFx.height=box.height|0; }
+    function spawnFirework(){ const w=celeFx.width,h=celeFx.height,cx=Math.random()*w,cy=Math.random()*h*0.4+h*0.1,hue=Math.floor(Math.random()*360);
+      for(let i=0;i<60;i++){ const a=(i/60)*Math.PI*2,s=Math.random()*3+1.5; particles.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:60+Math.random()*20,age:0,color:`hsl(${hue},100%,60%)`}); } }
+    function stepFireworks(){ const c=celeFx.getContext('2d'); c.clearRect(0,0,celeFx.width,celeFx.height);
+      if(Math.random()<0.07) spawnFirework(); particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.03;p.age++;});
+      particles=particles.filter(p=>p.age<p.life); particles.forEach(p=>{const a=1-p.age/p.life;c.fillStyle=p.color;c.globalAlpha=a;c.beginPath();c.arc(p.x,p.y,2,0,Math.PI*2);c.fill();c.globalAlpha=1;});
+      fxRAF=requestAnimationFrame(stepFireworks); }
+    function startFireworks(){ resizeFx(); window.addEventListener('resize', resizeFx); stepFireworks(); }
+    function stopFireworks(){ window.removeEventListener('resize', resizeFx); if(fxRAF) cancelAnimationFrame(fxRAF); particles=[]; }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+  // Make preview sortable
+  Sortable.create(document.getElementById('preview'), {
+    animation: 150,
+    onEnd: function (evt) {
+      // Reorder the `files` array when user drags
+      const moved = files.splice(evt.oldIndex, 1)[0];
+      files.splice(evt.newIndex, 0, moved);
+      renderList(); // re-render with new order
+    }
+  });
+</script>
+
+</body>
+</html>

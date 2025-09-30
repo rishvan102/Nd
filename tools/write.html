@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>📝 Write Note → PDF • NiceDay PDF Jar</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="tool-wrap">
+    <h1>📝 Write a Note → PDF</h1>
+    <p>Type or paste your note — we’ll wrap it neatly onto A4 pages.</p>
+
+    <div class="tool-card">
+      <label>Title (optional)
+        <input id="noteTitle" class="input" placeholder="My Notes" />
+      </label>
+
+      <label style="margin-top:.5rem; display:block;">
+        Note Content
+        <textarea id="noteInput" rows="12" class="input" placeholder="Type your note here…"></textarea>
+      </label>
+
+      <div class="grid two" style="margin-top:.5rem">
+        <label>Font Size
+          <input id="fontSize" type="number" class="input" value="12" />
+        </label>
+        <label>Margins (pt)
+          <input id="margin" type="number" class="input" value="40" />
+        </label>
+      </div>
+
+      <button id="go" style="margin-top:.75rem">Create PDF</button>
+      <p id="status" class="status"></p>
+    </div>
+  </main>
+
+  <!-- pdf-lib -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="write.js"></script>
+  <script src="../assets/celebrate.js"></script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🧹 Delete Pages • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------------- THEME (light default) ---------------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    /* ---------------- BASE ---------------- */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* ---------------- HEADER ---------------- */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;flex:0 0 42px;
+      display:grid;place-items:center;font-weight:800;letter-spacing:.3px;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .logo span{font-size:14px}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+    .themeBtn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.4rem .75rem; border-radius:999px; cursor:pointer; font-size:.9rem;
+    }
+
+    /* ---------------- CARD ---------------- */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* ---------------- DROP ZONE ---------------- */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg); cursor:pointer;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .drop:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    .drop .ic{
+      width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    }
+    .drop strong{display:block}
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* ---------------- INPUTS ---------------- */
+    .input{
+      width:100%; margin-top:12px; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border); background:var(--card); color:var(--ink); font-weight:600;
+    }
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+
+    /* ---------------- CHIPS ---------------- */
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 10px;border-radius:999px;font-weight:700;cursor:pointer;
+    }
+    .chip:hover{filter:brightness(1.02)}
+
+    /* ---------------- CTA ---------------- */
+    .cta{
+      margin-top:12px; width:100%; padding:12px 14px; border:0; border-radius:12px;
+      color:#fff; font-weight:800; letter-spacing:.2px; cursor:pointer;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .cta:hover{filter:brightness(1.02)}
+    .cta:active{transform:translateY(1px)}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:4px;color:var(--muted);font-size:12px}
+
+    /* ---------------- RESPONSIVE ---------------- */
+    @media (max-width:640px){
+      .title h1{font-size:18px}
+      .logo{width:38px;height:38px;border-radius:11px}
+      .drop{padding:12px}
+      .drop .ic{width:36px;height:36px}
+      .fileBadge{max-width:60%}
+    }
+    @media (max-width:420px){
+      .subtitle{font-size:12px}
+      .fileBadge{display:none}
+      .chip{flex:1 1 auto;text-align:center}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo"><span>ND</span></div>
+        <div class="title">
+          <h1>🧹 Delete Pages</h1>
+          <p class="subtitle">Remove specific pages or ranges (e.g., <code>2,4-6,9</code>).</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- Card -->
+    <section class="card">
+      <!-- Modern drop zone -->
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">Single PDF • We’ll show page count after loading</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <!-- Pages list -->
+      <label for="list" style="display:block;margin-top:12px;">
+        Pages to delete
+        <input id="list" class="input" placeholder="e.g., 2,4-6,9" inputmode="numeric" />
+      </label>
+
+      <!-- Quick chips -->
+      <div class="chips" role="group" aria-label="Quick selection">
+        <button class="chip" type="button" id="firstChip">First page</button>
+        <button class="chip" type="button" id="lastChip">Last page</button>
+        <button class="chip" type="button" id="oddChip">Odd pages</button>
+        <button class="chip" type="button" id="evenChip">Even pages</button>
+        <button class="chip" type="button" id="clearChip">Clear</button>
+      </div>
+
+      <!-- Action -->
+      <button id="go" class="cta">Delete &amp; Download</button>
+
+      <p id="status" class="status" aria-live="polite">PDF not loaded yet.</p>
+      <p class="hint">Tip: Page numbers start at <b>1</b>. Use commas for many pages and <b>a-b</b> for ranges.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- your behavior -->
+  <script src="delete.js"></script>
+  <!-- celebration (confetti/quotes) -->
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme (light by default, remember choice) ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const saved = localStorage.getItem('nd-theme');
+    if (saved === 'dark' || saved === 'light') {
+      root.setAttribute('data-theme', saved);
+      themeBtn.textContent = saved === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(saved === 'dark'));
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('nd-theme', next);
+      themeBtn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(next === 'dark'));
+    });
+
+    /* ---------- File badge + drag & drop ---------- */
+    const file = document.getElementById('file');
+    const badge = document.getElementById('fileBadge');
+    const drop = document.getElementById('dropZone');
+    const statusEl = document.getElementById('status');
+
+    function setBadge(name, size){
+      if(!name){ badge.hidden = true; return; }
+      const kb = Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+      statusEl.textContent = 'PDF loaded. Enter pages to delete, then press “Delete & Download”.';
+    }
+    file.addEventListener('change', e=>{
+      const f = e.target.files?.[0]; setBadge(f?.name, f?.size||0);
+    });
+
+    drop.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); file.click(); }
+    });
+
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{
+        e.preventDefault(); e.stopPropagation();
+        drop.style.borderColor = 'color-mix(in oklab, var(--brand) 55%, #fff)';
+      });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{
+        e.preventDefault(); e.stopPropagation();
+        drop.style.borderColor = 'var(--border)';
+      });
+    });
+    drop.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type === 'application/pdf'){
+        file.files = e.dataTransfer.files;
+        file.dispatchEvent(new Event('change'));
+      }
+    });
+
+    /* ---------- Quick chips (fill the input; handle in delete.js) ---------- */
+    const listEl = document.getElementById('list');
+    document.getElementById('clearChip').onclick = ()=> listEl.value = '';
+    document.getElementById('firstChip').onclick = ()=> listEl.value = '1';
+    document.getElementById('lastChip').onclick  = ()=> listEl.value = 'last'; // support in delete.js if desired
+    document.getElementById('oddChip').onclick   = ()=> listEl.value = 'odd';
+    document.getElementById('evenChip').onclick  = ()=> listEl.value = 'even';
+  </script>
+</body>
+</html>

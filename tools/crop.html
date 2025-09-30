@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <title>Crop PDF – Trim White Margins</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f7f8fb; --panel:#ffffff; --text:#0f172a; --muted:#6b7280; --border:#e5e7eb;
+      --accent:#3b82f6; --accent-2:#60a5fa; --ring:0 0 0 4px rgba(59,130,246,.15);
+      --shadow:0 10px 25px rgba(2,6,23,.06); --pill:#eef2ff; --pillText:#3730a3;
+      --ok:#16a34a; --err:#ef4343;
+    }
+    html[data-theme="dark"]{
+      --bg:#0b1020; --panel:#0e1328; --text:#e6e8ee; --muted:#9aa4bf; --border:#1f2850;
+      --accent:#8b86ff; --accent-2:#a5a1ff; --ring:0 0 0 4px rgba(139,134,255,.18);
+      --shadow:0 10px 30px rgba(0,0,0,.35); --pill:#0f1736; --pillText:#c7d2fe;
+      --ok:#22c55e; --err:#f87171;
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font:14px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:1200px;margin:28px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .logo{
+      width:40px;height:40px;border-radius:12px;
+      background:linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow:var(--shadow); display:grid; place-items:center;
+    }
+    .logo span{
+      font-weight:900; letter-spacing:.2px; color:#fff; font-size:16px;
+    }
+    h1{margin:0;font-size:24px;letter-spacing:.2px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+    /* Bar */
+    .bar{
+      display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+      background:var(--panel);border:1px solid var(--border);border-radius:14px;
+      padding:12px;box-shadow:var(--shadow)
+    }
+    .bar .sp{flex:1 1 auto}
+    .btn{
+      appearance:none;border:1px solid var(--border);background:#fff;color:#111827;
+      padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;
+      transition:filter .15s ease, transform .05s ease, background .15s, border-color .15s;
+    }
+    html[data-theme="dark"] .btn{background:#111827;color:#e5e7eb;border-color:#1f2a44}
+    .btn:hover{filter:brightness(1.03)} .btn:active{transform:translateY(1px)}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(59,130,246,.25)}
+    .btn.ghost{background:transparent}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.3)}
+    .toggle{display:inline-flex;align-items:center;gap:6px}
+
+    /* Modern upload */
+    #file{display:none}
+    .upload-btn{
+      background:linear-gradient(135deg, var(--accent), var(--accent-2));
+      color:#fff; border:none; box-shadow:0 6px 18px rgba(59,130,246,.25);
+      display:inline-flex;align-items:center;gap:8px;
+    }
+    .upload-btn::before{content:"📂"}
+    .fileName{
+      padding:8px 12px;border:1px dashed var(--border);border-radius:10px;
+      color:var(--muted);background:rgba(99,102,241,.05)
+    }
+    html[data-theme="dark"] .fileName{background:#0f1531;border-color:#33407b;color:#c9cff8}
+
+    /* Zoom */
+    .zoomWrap{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:10px;background:var(--panel)}
+    .zoomWrap input[type=range]{width:150px}
+    .zoomVal{min-width:38px;text-align:right;color:var(--muted);font-weight:600}
+
+    /* Layout */
+    .grid{display:grid;grid-template-columns:3fr 1fr;gap:16px;margin-top:14px}
+    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+
+    .sec{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+    .sec h3{margin:2px 0 12px;font-size:15px;font-weight:800;letter-spacing:.2px}
+
+    /* Canvas */
+    .canvasWrap{position:relative}
+    .overlay{position:relative}
+    canvas{
+      background:linear-gradient(180deg, rgba(0,0,0,.03), transparent), #fff;
+      border-radius:12px;display:block;width:100%;height:auto;touch-action:none;
+      box-shadow:inset 0 0 0 1px var(--border);
+    }
+    html[data-theme="dark"] canvas{background:#0b0f1c}
+
+    .crop{
+      position:absolute;border:2.5px solid var(--accent);
+      box-shadow:0 0 0 9999px rgba(59,130,246,.10) inset;
+      border-radius:10px;touch-action:none;cursor:move
+    }
+    .handle{position:absolute;width:16px;height:16px;background:var(--accent);border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+    .handle.nw{top:-10px;left:-10px;cursor:nwse-resize}
+    .handle.ne{top:-10px;right:-10px;cursor:nesw-resize}
+    .handle.sw{bottom:-10px;left:-10px;cursor:nesw-resize}
+    .handle.se{bottom:-10px;right:-10px;cursor:nwse-resize}
+
+    .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    .pill{background:var(--pill);color:var(--pillText);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px;display:inline-flex;align-items:center;gap:8px}
+    .pill input{accent-color:var(--accent)}
+
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .status.err{color:var(--err)} .ok{color:var(--ok)}
+
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    .num{display:flex;flex-direction:column;gap:6px}
+    .num label{font-size:12px;color:var(--muted)}
+    .num input{
+      width:140px;max-width:46vw;padding:10px;border-radius:12px;border:1px solid var(--border);background:#fff;color:#111827;
+      font-weight:700;text-align:left;outline:none;
+    }
+    html[data-theme="dark"] .num input{background:#0b1020;color:#e6e8ee;border-color:#223062}
+    .num input:focus{box-shadow:var(--ring);border-color:var(--accent)}
+
+    .hintBubble{
+      position:absolute;left:50%;top:8px;transform:translateX(-50%);
+      background:#f1f5fe;border:1px dashed #bfdbfe;color:#1f2937;
+      padding:8px 12px;border-radius:10px;font-size:12px;display:none;gap:10px;align-items:center
+    }
+    html[data-theme="dark"] .hintBubble{background:#0f1531;border-color:#33407b;color:#dbe0ff}
+    .hintBubble.show{display:flex}
+
+    .badge{background:#eef2ff;color:#111827;border:1px solid var(--border);border-radius:10px;padding:6px 10px}
+    html[data-theme="dark"] .badge{background:#0f1736;color:#c9cff8;border-color:#2d3870}
+
+    hr{border:none;border-top:1px solid var(--border);margin:12px 0}
+
+    /* Celebration popup */
+    .popBack{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;z-index:999}
+    .pop{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);max-width:520px;width:92%;padding:18px 18px 20px; overflow:hidden;}
+    .popCanvas{position:absolute;inset:0;border-radius:16px;pointer-events:none;z-index:0}
+    .popTitle,.popQuote,.popRow{position:relative;z-index:1}
+    .popTitle{margin:0 0 6px;font-weight:800;color:var(--text)}
+    .popQuote{margin:4px 0 8px;color:var(--muted);font-size:14px}
+    .popRow{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  </style>
+
+  <!-- pdf.js (preview render) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
+  <!-- pdf-lib (export/edit) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="logo"><span>ND</span></div>
+      <div>
+        <h1>Crop PDF</h1>
+        <p class="subtitle">Remove empty margins or keep a specific area. Works on desktop & mobile.</p>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="bar" role="toolbar" aria-label="PDF actions">
+      <!-- Hidden native input + modern label button -->
+      <input id="file" type="file" accept="application/pdf" aria-label="Choose PDF file">
+      <label for="file" class="btn upload-btn">Choose File</label>
+      <span id="fileName" class="fileName">No file chosen</span>
+
+      <button id="prev" class="btn ghost" disabled>◀ Prev</button>
+      <button id="next" class="btn ghost" disabled>Next ▶</button>
+      <span id="pageLabel" class="badge" aria-live="polite">– / –</span>
+
+      <span class="sp"></span>
+
+      <div class="zoomWrap" title="Preview zoom">
+        <span>Zoom</span>
+        <input id="zoom" type="range" min="50" max="300" value="125">
+        <span id="zoomLabel" class="zoomVal">125%</span>
+      </div>
+
+      <button id="resetSel" class="btn" disabled>Reset selection</button>
+      <button id="download" class="btn primary" disabled>⬇ Download Cropped</button>
+      <button id="themeBtn" class="btn toggle" title="Toggle dark mode" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- How it works -->
+    <div class="sec" style="margin-top:12px">
+      <strong>How it works</strong>
+      <ol style="margin:8px 0 0 18px; color:var(--muted)">
+        <li>Click <b>Choose File</b> and pick your PDF.</li>
+        <li>Drag the blue box to cover what you want to keep. Resize using the corner dots.</li>
+        <li>Optional: tick <b>Apply to all pages</b> or use the page arrows to crop just one page.</li>
+        <li>Click <b>Download Cropped</b>. If your browser blocks downloads, a backup link appears.</li>
+      </ol>
+    </div>
+
+    <div class="grid">
+      <!-- Left: canvas -->
+      <section class="sec" aria-label="Preview and selection">
+        <h3>1) Preview & select area</h3>
+        <div class="canvasWrap">
+          <div id="canvasHint" class="hintBubble">👉 <b>Tip:</b> Drag the blue box. Double-tap (mobile) / double-click (desktop) to select the full page.</div>
+          <div class="overlay">
+            <canvas id="pageCanvas"></canvas>
+            <div id="crop" class="crop" hidden aria-label="Crop rectangle" role="group">
+              <div class="handle nw" aria-label="Resize top-left"></div>
+              <div class="handle ne" aria-label="Resize top-right"></div>
+              <div class="handle sw" aria-label="Resize bottom-left"></div>
+              <div class="handle se" aria-label="Resize bottom-right"></div>
+            </div>
+          </div>
+          <div class="inline" style="margin-top:12px">
+            <label class="pill"><input type="checkbox" id="applyAll" checked> Apply to all pages</label>
+            <span class="pill">Hold <kbd>Shift</kbd> to lock ratio</span>
+            <span class="pill">Double-tap / Double-click = Full page</span>
+          </div>
+          <div id="status" class="status" aria-live="polite">Choose a PDF to start.</div>
+        </div>
+      </section>
+
+      <!-- Right: controls -->
+      <section class="sec" aria-label="Fine tune selection">
+        <h3>2) Fine-tune selection (pixels)</h3>
+        <div class="row">
+          <div class="num"><label for="w">Width</label><input id="w" type="number" step="1" min="1" inputmode="numeric" pattern="[0-9]*"></div>
+          <div class="num"><label for="h">Height</label><input id="h" type="number" step="1" min="1" inputmode="numeric" pattern="[0-9]*"></div>
+        </div>
+        <div class="row">
+          <div class="num"><label for="x">Left (X)</label><input id="x" type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*"></div>
+          <div class="num"><label for="y">Top (Y)</label><input id="y" type="number" step="1" min="0" inputmode="numeric" pattern="[0-9]*"></div>
+        </div>
+        <p class="status">Numbers are in <b>preview pixels</b>. They’re mapped precisely to the PDF on export.</p>
+        <hr>
+        <h3>3) Export</h3>
+        <p class="status">Click <b>Download Cropped</b> in the toolbar. A backup link will appear if the automatic download is blocked.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Celebration Popup -->
+  <div id="celeBack" class="popBack" role="dialog" aria-modal="true" aria-labelledby="celeTitle">
+    <div class="pop">
+      <canvas id="celeFx" class="popCanvas"></canvas>
+      <h3 id="celeTitle" class="popTitle">Cropped & ready! 🎉</h3>
+      <p id="celeQuote" class="popQuote">Great things are done by a series of small steps.</p>
+      <div class="popRow">
+        <button id="celeClose" class="btn">Close</button>
+        <a id="celeDl" class="btn primary" href="#" download="cropped.pdf">Download again</a>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  const fileEl = $('file'), fileNameEl = $('fileName');
+  const prevBtn = $('prev'), nextBtn = $('next');
+  const pageLabel = $('pageLabel'), resetSel = $('resetSel'), downloadBtn = $('download');
+  const applyAll = $('applyAll'), canvas = $('pageCanvas'), hint = $('canvasHint');
+  const ctx = canvas.getContext('2d', { willReadFrequently:true });
+  const cropEl = $('crop'), statusEl = $('status'), themeBtn = $('themeBtn');
+
+  const inW = $('w'), inH = $('h'), inX = $('x'), inY = $('y');
+  const zoomEl = $('zoom'), zoomLabel = $('zoomLabel');
+
+  /* Theme */
+  const setTheme = mode => {
+    document.documentElement.setAttribute('data-theme', mode);
+    themeBtn.textContent = mode === 'dark' ? '☀️ Light' : '🌙 Dark';
+    themeBtn.setAttribute('aria-pressed', String(mode === 'dark'));
+    localStorage.setItem('cropTheme', mode);
+  };
+  setTheme(localStorage.getItem('cropTheme') || 'light');
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+  });
+
+  /* Celebration popup */
+  const celeBack = $('celeBack'), celeFx = $('celeFx'), celeDl = $('celeDl'), celeClose = $('celeClose'), celeQuote = $('celeQuote');
+  const QUOTES = [
+    "Small steps add up to big wins.",
+    "Done is better than perfect.",
+    "You just made your document cleaner!",
+    "Every crop is a step toward clarity.",
+    "Progress, not perfection.",
+    "Less noise, more focus. Nice job!",
+    "Tiny edits, big impact.",
+    "Clean pages, clear mind."
+  ];
+  function randomQuote(){ celeQuote.textContent = QUOTES[Math.floor(Math.random()*QUOTES.length)]; }
+  function showCelebration(href){ celeDl.href = href; randomQuote(); celeBack.style.display='flex'; startFireworks(); }
+  celeClose.addEventListener('click', ()=> { celeBack.style.display='none'; stopFireworks(); });
+  celeBack.addEventListener('click', e=>{ if(e.target===celeBack){ celeBack.style.display='none'; stopFireworks(); }});
+
+  // fireworks
+  let fxRAF = null, particles = [];
+  function resizeFx(){ const box = celeBack.querySelector('.pop').getBoundingClientRect(); celeFx.width = Math.floor(box.width); celeFx.height = Math.floor(box.height); }
+  function spawnFirework(){
+    const w = celeFx.width, h = celeFx.height, cx = Math.random()*w, cy = Math.random()*h*0.4 + h*0.1;
+    const hue = Math.floor(Math.random()*360);
+    for(let i=0;i<60;i++){
+      const angle = (i/60)*Math.PI*2, speed = Math.random()*3+1.5;
+      particles.push({ x:cx, y:cy, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, life:60+Math.random()*20, age:0, color:`hsl(${hue},100%,60%)` });
+    }
+  }
+  function stepFireworks(){
+    const c = celeFx.getContext('2d');
+    c.clearRect(0,0,celeFx.width,celeFx.height);
+    if (Math.random()<0.07) spawnFirework();
+    particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.age++; });
+    particles = particles.filter(p=>p.age<p.life);
+    particles.forEach(p=>{
+      const alpha = 1 - p.age/p.life;
+      c.fillStyle = p.color; c.globalAlpha = alpha;
+      c.beginPath(); c.arc(p.x, p.y, 2, 0, Math.PI*2); c.fill();
+      c.globalAlpha = 1;
+    });
+    fxRAF = requestAnimationFrame(stepFireworks);
+  }
+  function startFireworks(){ resizeFx(); window.addEventListener('resize', resizeFx); stepFireworks(); }
+  function stopFireworks(){ window.removeEventListener('resize', resizeFx); if (fxRAF) cancelAnimationFrame(fxRAF); particles=[]; }
+
+  /* State */
+  let pdfDoc = null, currentPage = 1, pageCount = 0;
+  let pageViewportCss = { width: 0, height: 0 }; // CSS pixels
+  const crops = new Map();
+  let zoomScale = 1.25;           // default 125%
+  let renderTask = null;          // serialize renders
+
+  /* Helpers */
+  const isFinitePos = (...v) => v.every(n => Number.isFinite(n) && n >= 0);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const setStatus = (s, isErr=false) => { statusEl.textContent = s; statusEl.className = 'status' + (isErr ? ' err' : ''); };
+
+  function ensureCropVisible() {
+    const c = crops.get(currentPage);
+    if (!c) { cropEl.hidden = true; return; }
+    cropEl.hidden = false;
+    cropEl.style.left = c.x + 'px';
+    cropEl.style.top = c.y + 'px';
+    cropEl.style.width = c.w + 'px';
+    cropEl.style.height = c.h + 'px';
+    inW.value = Math.round(c.w); inH.value = Math.round(c.h);
+    inX.value = Math.round(c.x); inY.value = Math.round(c.y);
+    resetSel.disabled = false; downloadBtn.disabled = false;
+    hint.classList.remove('show');
+  }
+  function setCropRect(x, y, w, h) {
+    const W = pageViewportCss.width, H = pageViewportCss.height;
+    if(!(W>0 && H>0)) return;
+    if(!isFinitePos(x,y,w,h) || w<=0 || h<=0) return;
+    x = clamp(x, 0, Math.max(0, W-1));
+    y = clamp(y, 0, Math.max(0, H-1));
+    w = clamp(w, 1, W); h = clamp(h, 1, H);
+    if (x + w > W) x = W - w;
+    if (y + h > H) y = H - h;
+    crops.set(currentPage, {x,y,w,h});
+    ensureCropVisible();
+  }
+  function selectFullPage(){ if(pageViewportCss.width>0 && pageViewportCss.height>0) setCropRect(0,0,pageViewportCss.width,pageViewportCss.height); }
+
+  function ensureDefaultBox(){
+    const W = pageViewportCss.width, H = pageViewportCss.height;
+    if (W<=0 || H<=0) return;
+    if (!crops.get(currentPage)) {
+      const m = Math.round(Math.min(W,H)*0.05);
+      setCropRect(m,m, Math.max(1, W-2*m), Math.max(1, H-2*m));
+      hint.classList.add('show');
+    } else { ensureCropVisible(); }
+  }
+
+  /* Drag / Resize */
+  let dragMode = null, dragStart = null;
+  cropEl.addEventListener('pointerdown', (e)=>{
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const rect = cropEl.getBoundingClientRect();
+    const t = e.target;
+    if (t.classList.contains('handle')) {
+      if (t.classList.contains('nw')) dragMode='nw';
+      else if (t.classList.contains('ne')) dragMode='ne';
+      else if (t.classList.contains('sw')) dragMode='sw';
+      else dragMode='se';
+    } else dragMode='move';
+    cropEl.setPointerCapture(e.pointerId);
+    dragStart = {
+      pageX:e.clientX, pageY:e.clientY,
+      x:rect.left, y:rect.top, w:rect.width, h:rect.height,
+      canvas: canvas.getBoundingClientRect()
+    };
+  });
+  cropEl.addEventListener('pointermove', (e)=>{
+    if (!dragMode || !dragStart) return;
+    const dx = e.clientX - dragStart.pageX, dy = e.clientY - dragStart.pageY;
+    const c = dragStart;
+    let x = c.x - c.canvas.left, y = c.y - c.canvas.top, w = c.w, h = c.h;
+    const keepRatio = e.shiftKey, ratio = h>0 ? (w/h) : 1;
+
+    if (dragMode === 'move'){ x += dx; y += dy; }
+    else{
+      if (dragMode.includes('n')) { y += dy; h -= dy; }
+      if (dragMode.includes('s')) { h += dy; }
+      if (dragMode.includes('w')) { x += dx; w -= dx; }
+      if (dragMode.includes('e')) { w += dx; }
+      if (keepRatio){
+        if (Math.abs(w/h - ratio) > 1e-3){
+          if (Math.abs(w) > Math.abs(h)*ratio) w = Math.sign(w)*Math.abs(h)*ratio;
+          else h = Math.sign(h)*Math.abs(w)/ratio;
+          if (dragMode.includes('n')) y = c.y - c.canvas.top + (c.h - h);
+          if (dragMode.includes('w')) x = c.x - c.canvas.left + (c.w - w);
+        }
+      }
+    }
+    setCropRect(x,y,w,h);
+  });
+  cropEl.addEventListener('pointerup', ()=>{ dragMode=null; dragStart=null; });
+
+  canvas.addEventListener('dblclick', selectFullPage);
+  let lastTap=0; const TAP_GAP=300;
+  canvas.addEventListener('pointerup', e=>{
+    const now = e.timeStamp || Date.now();
+    if (now - lastTap < TAP_GAP){ selectFullPage(); lastTap = 0; } else lastTap = now;
+  });
+  canvas.addEventListener('pointerdown', ()=>{ if(!crops.get(currentPage)) ensureDefaultBox(); });
+
+  function numOrNull(v){ const n=Number(v); return Number.isFinite(n)?n:null; }
+  [inW,inH,inX,inY].forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const c = crops.get(currentPage) || {x:10,y:10,w:100,h:100};
+      const W=numOrNull(inW.value)??c.w, H=numOrNull(inH.value)??c.h;
+      const X=numOrNull(inX.value)??c.x, Y=numOrNull(inY.value)??c.y;
+      setCropRect(X,Y,W,H);
+    });
+  });
+
+  resetSel.addEventListener('click', ()=>{
+    crops.delete(currentPage);
+    cropEl.hidden = true;
+    inW.value=inH.value=inX.value=inY.value='';
+    resetSel.disabled = true;
+    downloadBtn.disabled = true;
+    hint.classList.add('show');
+    setStatus('Selection cleared. Drag on the page to start again.');
+  });
+
+  /* Zoom */
+  zoomEl.addEventListener('input', ()=>{
+    zoomScale = zoomEl.value/100;
+    zoomLabel.textContent = zoomEl.value + '%';
+    if (pdfDoc) renderPage(currentPage);
+  });
+
+  /* Render (serialized) */
+  async function renderPage(n){
+    if (!pdfDoc) return;
+    if (renderTask) { try { renderTask.cancel(); await renderTask.promise; } catch(_){} renderTask=null; }
+
+    currentPage = Math.max(1, Math.min(n, pageCount));
+    const page = await pdfDoc.getPage(currentPage);
+    const base = page.getViewport({ scale: 1 });
+
+    const targetWidth = Math.min(1600, Math.max(360, window.innerWidth * 0.75)); // 75% of screen
+    const scale = (targetWidth / base.width) * zoomScale;
+    const vp = page.getViewport({ scale });
+
+    canvas.width = Math.floor(vp.width);
+    canvas.height = Math.floor(vp.height);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    renderTask = page.render({ canvasContext: ctx, viewport: vp });
+    try { await renderTask.promise; } finally { renderTask = null; }
+
+    // map using CSS size (responsive)
+    const rect = canvas.getBoundingClientRect();
+    pageViewportCss = { width: rect.width, height: rect.height };
+
+    pageLabel.textContent = `${currentPage} / ${pageCount}`;
+    prevBtn.disabled = currentPage<=1;
+    nextBtn.disabled = currentPage>=pageCount;
+
+    ensureDefaultBox();
+  }
+
+  /* File load */
+  fileEl.addEventListener('change', async ()=>{
+    const file = fileEl.files?.[0];
+    fileNameEl.textContent = file ? file.name : 'No file chosen';
+    if (!file) return;
+    setStatus('Loading PDF…');
+    try{
+      const arr = await file.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({ data: arr, useSystemFonts:true }).promise;
+      pageCount = pdfDoc.numPages;
+      crops.clear();
+      await renderPage(1);
+      setStatus('Drag the blue box to choose what to keep. Double-tap/double-click for full page. When ready, click “Download Cropped”.');
+      prevBtn.disabled = nextBtn.disabled = (pageCount<=1);
+      resetSel.disabled = true;
+      downloadBtn.disabled = true;
+    }catch(e){
+      console.error(e); setStatus('Failed to load PDF.', true);
+    }
+  });
+
+  prevBtn.addEventListener('click', ()=> renderPage(currentPage-1));
+  nextBtn.addEventListener('click', ()=> renderPage(currentPage+1));
+
+  /* Export */
+  downloadBtn.addEventListener('click', async ()=>{
+    if (!pdfDoc) return setStatus('Load a PDF first.', true);
+    setStatus('Cropping…');
+    try{
+      const f = fileEl.files?.[0];
+      const srcBytes = await f.arrayBuffer();
+      const srcDoc = await PDFLib.PDFDocument.load(srcBytes);
+      const outDoc = await PDFLib.PDFDocument.create();
+
+      const ui = crops.get(currentPage);
+      const Wcss = pageViewportCss.width || 1, Hcss = pageViewportCss.height || 1;
+      const validUi = ui && [ui.x,ui.y,ui.w,ui.h].every(Number.isFinite) && ui.w>0 && ui.h>0;
+
+      for (let i=0; i<srcDoc.getPageCount(); i++){
+        const srcPage = srcDoc.getPage(i);
+        const s = srcPage.getSize ? srcPage.getSize() : { width:612, height:792 };
+        const W = Number.isFinite(s.width)&&s.width>0 ? s.width : 612;
+        const H = Number.isFinite(s.height)&&s.height>0 ? s.height : 792;
+
+        let left=0, bottom=0, right=W, top=H;
+
+        if (validUi && (applyAll.checked || (i+1)===currentPage)){
+          const xPts=(ui.x/Wcss)*W, wPts=(ui.w/Wcss)*W;
+          const yTop=(ui.y/Hcss)*H, hPts=(ui.h/Hcss)*H;
+
+          left = xPts;
+          bottom = H - (yTop + hPts);
+          right = left + wPts;
+          top = bottom + hPts;
+
+          left = clamp(left,0,W); bottom = clamp(bottom,0,H);
+          right = clamp(right,0,W); top = clamp(top,0,H);
+          if (right<=left || top<=bottom){ left=0; bottom=0; right=W; top=H; }
+        }
+
+        const [embedded] = await outDoc.embedPages(
+          [srcPage],
+          [{ left, bottom, right, top }]
+        );
+        const newPage = outDoc.addPage([ right-left, top-bottom ]);
+        newPage.drawPage(embedded, { x:0, y:0, width: right-left, height: top-bottom });
+      }
+
+      const bytes = await outDoc.save();
+      const blob = new Blob([bytes], { type:'application/pdf' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cropped.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+
+      showCelebration(url);
+      setStatus('Done.');
+    }catch(err){
+      console.error(err);
+      setStatus('Error: ' + (err?.message||err), true);
+    }
+  });
+
+  const enableDownloadIfReady = () => { downloadBtn.disabled = !crops.get(currentPage); };
+  canvas.addEventListener('pointerup', enableDownloadIfReady);
+  [inW,inH,inX,inY].forEach(i => i.addEventListener('input', enableDownloadIfReady));
+
+  window.addEventListener('resize', async ()=>{
+    if (!pdfDoc) return;
+    const old = crops.get(currentPage);
+    await renderPage(currentPage);
+    if (old && pageViewportCss.width>0){
+      const rect = canvas.getBoundingClientRect();
+      setCropRect(
+        clamp(old.x,0,Math.max(0, rect.width-1)),
+        clamp(old.y,0,Math.max(0, rect.height-1)),
+        clamp(old.w,1,rect.width),
+        clamp(old.h,1,rect.height)
+      );
+    }
+  });
+
+  // initial labels
+  zoomLabel.textContent = Math.round(zoomEl.value) + '%';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🔄 Rotate Pages • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chipbg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chipbg:#0b1020;
+    }
+
+    /* ---------- BASE ---------- */
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:940px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:800;
+      box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.45rem .8rem; border-radius:999px; cursor:pointer; font-size:.9rem}
+
+    /* Card */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      box-shadow:var(--shadow); padding:14px;
+    }
+
+    /* Drop zone */
+    .drop{
+      display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chipbg);cursor:pointer;transition:border-color .15s ease
+    }
+    .drop:focus-visible{outline:none; box-shadow:var(--ring)}
+    #file{display:none}
+    .fileBadge{
+      margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chipbg);
+      max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+
+    /* Inputs */
+    .grid{display:grid;gap:10px}
+    @media (min-width:680px){ .two{grid-template-columns:1fr 1fr} }
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input, select{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      border-radius:12px; padding:10px 12px; font-size:.98rem;
+    }
+    .input:focus, select:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .chip{border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 10px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.85rem}
+
+    /* Buttons / status */
+    .btn{border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.7rem 1rem; border-radius:12px; cursor:pointer; font-weight:700}
+    .btn.primary{background:linear-gradient(90deg, var(--brand), var(--brand2));border-color:transparent;color:#fff}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:4px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🔄 Rotate Pages</h1>
+          <p class="subtitle">Enter page ranges and an angle. Example: <code>1-3,7</code> at <code>90</code>° clockwise.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
+
+    <!-- Card -->
+    <section class="card">
+      <!-- Modern drop zone -->
+      <label for="file" class="drop" id="dropZone" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div>
+          <strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">We’ll rotate the pages you choose</div>
+        </div>
+        <div id="fileBadge" class="fileBadge" hidden></div>
+      </label>
+      <input id="file" type="file" accept="application/pdf" />
+
+      <div class="grid two" style="margin-top:.75rem">
+        <label>Pages (ranges)
+          <input id="ranges" class="input" placeholder="e.g. 1-3,7  (empty = none)" />
+        </label>
+        <label>Angle (degrees)
+          <input id="angle" type="number" class="input" value="90" />
+        </label>
+      </div>
+
+      <div class="grid two" style="margin-top:.5rem">
+        <label>Direction
+          <select id="dir" class="input">
+            <option value="cw">Clockwise</option>
+            <option value="ccw">Counter-clockwise</option>
+          </select>
+        </label>
+        <label>Apply to
+          <select id="scope" class="input">
+            <option value="listed">Only listed pages</option>
+            <option value="all">All pages</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="chips" aria-label="Quick angles">
+        <button class="chip" data-ang="90">90°</button>
+        <button class="chip" data-ang="180">180°</button>
+        <button class="chip" data-ang="270">270°</button>
+      </div>
+
+      <div class="row" style="margin-top:.75rem">
+        <button id="go" class="btn primary">Rotate & Download</button>
+        <button id="resetForm" class="btn">Reset</button>
+      </div>
+
+      <p id="status" class="status" aria-live="polite">Choose a PDF to begin.</p>
+      <p class="hint">Tips: Page numbers start at 1. We apply rotation relative to each page’s current rotation and normalize to 0–359°.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme (light default) ---------- */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){
+      root.setAttribute('data-theme',mode);
+      themeBtn.textContent = mode==='dark' ? '☀️ Light' : '🌙 Dark';
+      localStorage.setItem('nd-theme',mode);
+    }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ---------- Elements ---------- */
+    const fileEl = document.getElementById('file');
+    const drop = document.getElementById('dropZone');
+    const badge = document.getElementById('fileBadge');
+    const rangesEl = document.getElementById('ranges');
+    const angleEl = document.getElementById('angle');
+    const dirEl = document.getElementById('dir');
+    const scopeEl = document.getElementById('scope');
+    const goBtn = document.getElementById('go');
+    const resetBtn = document.getElementById('resetForm');
+    const statusEl = document.getElementById('status');
+
+    const setStatus = (s)=> statusEl.textContent = s || '';
+
+    function setBadge(name,size){
+      if(!name){ badge.hidden = true; return; }
+      const kb = Math.max(1, Math.round((size||0)/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden = false;
+    }
+
+    /* ---------- Drag & drop helpers ---------- */
+    drop.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fileEl.click(); }
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = '#9ab6ff'; });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      drop.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); drop.style.borderColor = 'var(--border)'; });
+    });
+    drop.addEventListener('drop', e=>{
+      const f = e.dataTransfer?.files?.[0];
+      if(f && f.type === 'application/pdf'){
+        fileEl.files = e.dataTransfer.files;
+        fileEl.dispatchEvent(new Event('change'));
+      }
+    });
+
+    fileEl.addEventListener('change', e=>{
+      const f = e.target.files?.[0];
+      if(!f){ setBadge('',0); setStatus('Choose a PDF to begin.'); return; }
+      setBadge(f.name, f.size);
+      setStatus('PDF ready. Set your rotation options and click “Rotate & Download”.');
+    });
+
+    /* ---------- Quick angle chips ---------- */
+    document.querySelectorAll('.chip[data-ang]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        angleEl.value = btn.getAttribute('data-ang') || '90';
+      });
+    });
+
+    /* ---------- Utils ---------- */
+    function normalizeAngle(a){
+      // Keep within 0..359 and integer for PDF rotation
+      let n = Math.round(a % 360);
+      if(n < 0) n += 360;
+      return n;
+    }
+
+    function parseRanges(str, max){
+      if(!str) return [];
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).forEach(p=>{
+        if(!p) return;
+        if(p.includes('-')){
+          const [aStr,bStr] = p.split('-');
+          const a = Number(aStr), b = Number(bStr);
+          if(Number.isFinite(a) && Number.isFinite(b) && a>=1 && b>=a){
+            for(let i=a;i<=b;i++) out.add(i);
+          }
+        } else {
+          const n = Number(p);
+          if(Number.isFinite(n) && n>=1) out.add(n);
+        }
+      });
+      return [...out].filter(n=>!max || n<=max);
+    }
+
+    /* ---------- Rotate & Download ---------- */
+    goBtn.addEventListener('click', async ()=>{
+      const f = fileEl.files?.[0];
+      if(!f){ setStatus('Please choose a PDF first.'); return; }
+
+      // Read inputs
+      const dir = dirEl.value === 'ccw' ? -1 : 1;
+      let ang = Number(angleEl.value);
+      if(!Number.isFinite(ang)){ setStatus('Angle must be a number.'); return; }
+      ang = normalizeAngle(dir * ang);
+
+      try{
+        setStatus('Loading PDF…');
+        const bytes = await f.arrayBuffer();
+        const src = await PDFLib.PDFDocument.load(bytes);
+
+        const total = src.getPageCount();
+        let targets = [];
+        if(scopeEl.value === 'all'){
+          targets = Array.from({length: total}, (_,i)=> i+1);
+        }else{
+          const listed = parseRanges(rangesEl.value, total);
+          if(listed.length===0){ setStatus('No valid pages listed.'); return; }
+          targets = listed;
+        }
+
+        // Apply rotation relative to current page rotation
+        targets.forEach(n=>{
+          const idx = n-1;
+          if(idx<0 || idx>=total) return;
+          const page = src.getPage(idx);
+          let current = 0;
+          try {
+            const r = page.getRotation();
+            current = (typeof r === 'number' ? r : (r?.angle||0)) || 0;
+          } catch {}
+          const newAngle = normalizeAngle(current + ang);
+          page.setRotation(PDFLib.degrees(newAngle));
+        });
+
+        const outBytes = await src.save();
+        const blob = new Blob([outBytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'rotated.pdf'; a.click();
+
+        setStatus(`Done. Rotated ${targets.length} page(s) by ${ang}° ${dirEl.value==='ccw'?'CCW':'CW'}.`);
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        setStatus('Error: ' + (err?.message || err));
+      }
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      rangesEl.value = '';
+      angleEl.value = '90';
+      dirEl.value = 'cw';
+      scopeEl.value = 'listed';
+      setStatus('Reset. Choose a PDF and set options.');
+    });
+  </script>
+</body>
+</html>

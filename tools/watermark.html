@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>💧 Watermark PDF • NiceDay PDF Jar</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="tool-wrap">
+    <h1>💧 Add Watermark</h1>
+    <p>Apply a transparent text watermark across all pages of your PDF.</p>
+
+    <div class="tool-card">
+      <label>PDF File
+        <input id="pdfFile" type="file" accept="application/pdf" />
+      </label>
+
+      <label style="margin-top:.5rem; display:block;">
+        Watermark Text
+        <input id="wmText" class="input" placeholder="CONFIDENTIAL" value="CONFIDENTIAL" />
+      </label>
+
+      <div class="grid three" style="margin-top:.5rem">
+        <label>Font Size
+          <input id="size" type="number" class="input" value="48" />
+        </label>
+        <label>Opacity (0–1)
+          <input id="opacity" type="number" class="input" step="0.1" value="0.2" />
+        </label>
+        <label>Angle (deg)
+          <input id="angle" type="number" class="input" value="45" />
+        </label>
+      </div>
+
+      <div class="grid two" style="margin-top:.5rem">
+        <label>Mode
+          <select id="mode" class="input">
+            <option value="single">Single (center)</option>
+            <option value="tile">Tiled across page</option>
+          </select>
+        </label>
+        <label>Color
+          <input id="color" type="color" class="input" value="#d32f2f" />
+        </label>
+      </div>
+
+      <button id="go" style="margin-top:.75rem">Apply & Download</button>
+      <p id="status" class="status"></p>
+    </div>
+  </main>
+
+  <!-- pdf-lib -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="watermark.js"></script>
+  <script src="../assets/celebrate.js"></script>
+</body>
+</html>

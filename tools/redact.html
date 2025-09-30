@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>🕶️ Redact PDF • NiceDay PDF Jar</title>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip:#f4f6fb;
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip:#0b1020;
+    }
+
+    /* ---------- BASE ---------- */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:1000px;margin:22px auto 40px;padding:0 16px}
+
+    /* ---------- HEADER ---------- */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;letter-spacing:.3px;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 6px 16px rgba(37,99,235,.25)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    /* ---------- CARD ---------- */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+    .btn{
+      border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:.55rem .8rem; border-radius:10px; cursor:pointer; font-weight:700;
+    }
+    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;border-color:transparent}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .pill{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:.35rem .6rem;color:var(--muted);font-size:.85rem}
+
+    /* ---------- CANVAS STAGE ---------- */
+    .stageWrap{position:relative;border:1px solid var(--border);border-radius:14px;background:#fff;overflow:hidden}
+    canvas{display:block;width:100%;height:auto;background:#fff;touch-action:none}
+    /* live-draw rectangle */
+    .rubber{
+      position:absolute;border:2px solid #111827;background:rgba(0,0,0,.35);
+      pointer-events:none;border-radius:4px
+    }
+
+    .status{margin-top:8px;color:var(--muted);font-size:.9rem}
+
+    /* redaction list */
+    .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .meta .pill{user-select:none}
+
+    @media (max-width:640px){ .title h1{font-size:18px} .logo{width:38px;height:38px;border-radius:11px} }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🕶️ Redact (Draw Boxes)</h1>
+          <p class="subtitle">Load a PDF, draw black boxes over sensitive content, then download a redacted copy.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button" aria-pressed="false">🌙 Dark</button>
+    </div>
+
+    <!-- Tool -->
+    <section class="card">
+      <div class="bar">
+        <input id="file" type="file" accept="application/pdf" />
+        <span class="pill" id="pageLabel">– / –</span>
+        <button id="prev" class="btn" disabled>◀ Prev</button>
+        <button id="next" class="btn" disabled>Next ▶</button>
+        <span class="pill">Tip: drag to draw a box • double-tap = full-page box</span>
+        <span class="pill" id="countPill" hidden>0 boxes</span>
+        <span style="flex:1 1 auto"></span>
+        <button id="clear" class="btn" disabled>Clear Page</button>
+        <button id="apply" class="btn primary" disabled>Apply Redactions & Download</button>
+      </div>
+
+      <div class="stageWrap" id="stageWrap">
+        <canvas id="stage"></canvas>
+        <div id="rubber" class="rubber" hidden></div>
+      </div>
+
+      <div class="meta" id="meta"></div>
+      <p id="status" class="status">Choose a PDF to start.</p>
+    </section>
+  </main>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---------- Theme (Light default) ---------- */
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeBtn');
+    const savedTheme = localStorage.getItem('nd-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      root.setAttribute('data-theme', savedTheme);
+      themeBtn.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(savedTheme === 'dark'));
+    } else {
+      root.setAttribute('data-theme', 'light'); // default
+    }
+    themeBtn.addEventListener('click', ()=> {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('nd-theme', next);
+      themeBtn.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeBtn.setAttribute('aria-pressed', String(next === 'dark'));
+    });
+
+    /* ---------- Elements ---------- */
+    const fileEl = document.getElementById('file');
+    const stage = document.getElementById('stage');
+    const wrap = document.getElementById('stageWrap');
+    const rubber = document.getElementById('rubber');
+    const statusEl = document.getElementById('status');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const applyBtn = document.getElementById('apply');
+    const clearBtn = document.getElementById('clear');
+    const pageLabel = document.getElementById('pageLabel');
+    const metaEl = document.getElementById('meta');
+    const countPill = document.getElementById('countPill');
+
+    const ctx = stage.getContext('2d', { willReadFrequently:true });
+
+    /* ---------- State ---------- */
+    let pdfDoc = null;
+    let currentPage = 1;
+    let pageCount = 0;
+
+    // For mapping CSS pixels <-> PDF points
+    let cssW = 0, cssH = 0, pdfW = 0, pdfH = 0;
+
+    // Store redactions by page: {left,bottom,width,height} in **PDF points**
+    const redactions = new Map();
+
+    /* ---------- Helpers ---------- */
+    const setStatus = (s) => { statusEl.textContent = s; };
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+    function updatePills(){
+      const arr = redactions.get(currentPage) || [];
+      countPill.hidden = false;
+      countPill.textContent = `${arr.length} box${arr.length===1?'':'es'}`;
+      pageLabel.textContent = `${currentPage} / ${pageCount}`;
+      clearBtn.disabled = arr.length===0;
+      applyBtn.disabled = (pageCount===0);
+    }
+
+    function listMeta(){
+      const arr = redactions.get(currentPage) || [];
+      metaEl.innerHTML = '';
+      arr.forEach((r, i)=>{
+        const chip = document.createElement('span');
+        chip.className = 'pill';
+        chip.textContent = `#${i+1} ${Math.round(r.width)}×${Math.round(r.height)} pt`;
+        metaEl.appendChild(chip);
+      });
+    }
+
+    function cssToPdfRect(x, y, w, h){
+      // x,y in CSS pixels (top-left origin). Convert to PDF points (bottom-left).
+      const left = (x / cssW) * pdfW;
+      const width = (w / cssW) * pdfW;
+      const topY = (y / cssH) * pdfH;
+      const height = (h / cssH) * pdfH;
+      const bottom = pdfH - (topY + height);
+      return { left, bottom, width, height };
+    }
+
+    function pdfToCssRect(r){
+      const x = (r.left / pdfW) * cssW;
+      const w = (r.width / pdfW) * cssW;
+      const yTop = (pdfH - (r.bottom + r.height)) / pdfH * cssH;
+      const h = (r.height / pdfH) * cssH;
+      return { x, y: yTop, w, h };
+    }
+
+    function drawOverlay(){
+      // Draw the redaction boxes atop the rendered page for current page
+      const arr = redactions.get(currentPage) || [];
+      ctx.save();
+      ctx.lineWidth = 2;
+      arr.forEach(r=>{
+        const {x,y,w,h} = pdfToCssRect(r);
+        ctx.fillStyle = 'rgba(0,0,0,.35)';
+        ctx.strokeStyle = '#111827';
+        ctx.fillRect(x,y,w,h);
+        ctx.strokeRect(x,y,w,h);
+      });
+      ctx.restore();
+    }
+
+    /* ---------- Render ---------- */
+    async function renderPage(n){
+      if (!pdfDoc) return;
+      currentPage = clamp(n, 1, pageCount);
+      const page = await pdfDoc.getPage(currentPage);
+      const base = page.getViewport({ scale: 1 });
+
+      // target CSS width: fit container
+      const targetCssW = Math.min(900, wrap.clientWidth || 900);
+      const scale = targetCssW / base.width;
+      const vp = page.getViewport({ scale });
+
+      // devicePixelRatio for crisp rendering
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      stage.width = Math.floor(vp.width * dpr);
+      stage.height = Math.floor(vp.height * dpr);
+      stage.style.width = Math.floor(vp.width) + 'px';
+      stage.style.height = Math.floor(vp.height) + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0); // reset + scale
+
+      cssW = Math.floor(vp.width);
+      cssH = Math.floor(vp.height);
+      pdfW = base.width;
+      pdfH = base.height;
+
+      ctx.clearRect(0,0,cssW,cssH);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+      // draw saved boxes
+      drawOverlay();
+
+      // nav
+      prevBtn.disabled = currentPage<=1;
+      nextBtn.disabled = currentPage>=pageCount;
+
+      updatePills();
+      listMeta();
+    }
+
+    /* ---------- Load PDF ---------- */
+    fileEl.addEventListener('change', async ()=>{
+      const f = fileEl.files?.[0]; if(!f) return;
+      setStatus('Loading PDF…');
+      try{
+        const buf = await f.arrayBuffer();
+        pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+        pageCount = pdfDoc.numPages;
+        redactions.clear();
+        await renderPage(1);
+        setStatus('Drag on the page to draw redaction boxes. Use Apply when ready.');
+        applyBtn.disabled = false;
+      }catch(err){
+        console.error(err);
+        setStatus('Failed to load PDF.');
+      }
+    });
+
+    prevBtn.addEventListener('click', ()=> renderPage(currentPage-1));
+    nextBtn.addEventListener('click', ()=> renderPage(currentPage+1));
+
+    clearBtn.addEventListener('click', ()=>{
+      redactions.delete(currentPage);
+      renderPage(currentPage);
+    });
+
+    /* ---------- Drawing (mouse + touch via Pointer Events) ---------- */
+    let drawing = false;
+    let start = null;
+
+    function getLocalXY(evt){
+      const rect = stage.getBoundingClientRect();
+      const x = clamp((evt.clientX ?? 0) - rect.left, 0, rect.width);
+      const y = clamp((evt.clientY ?? 0) - rect.top, 0, rect.height);
+      return { x, y };
+    }
+
+    stage.addEventListener('pointerdown', (e)=>{
+      if (!pdfDoc) return;
+      e.preventDefault();
+      stage.setPointerCapture(e.pointerId);
+      drawing = true;
+      start = getLocalXY(e);
+      // show rubber band
+      rubber.hidden = false;
+      rubber.style.left = start.x + 'px';
+      rubber.style.top = start.y + 'px';
+      rubber.style.width = '0px';
+      rubber.style.height = '0px';
+    });
+
+    stage.addEventListener('pointermove', (e)=>{
+      if (!drawing || !start) return;
+      const cur = getLocalXY(e);
+      const x = Math.min(start.x, cur.x);
+      const y = Math.min(start.y, cur.y);
+      const w = Math.abs(cur.x - start.x);
+      const h = Math.abs(cur.y - start.y);
+      rubber.style.left = x + 'px';
+      rubber.style.top = y + 'px';
+      rubber.style.width = w + 'px';
+      rubber.style.height = h + 'px';
+    });
+
+    stage.addEventListener('pointerup', (e)=>{
+      if (!drawing || !start){ rubber.hidden = true; return; }
+      const cur = getLocalXY(e);
+      drawing = false;
+      stage.releasePointerCapture(e.pointerId);
+
+      const x = Math.min(start.x, cur.x);
+      const y = Math.min(start.y, cur.y);
+      const w = Math.abs(cur.x - start.x);
+      const h = Math.abs(cur.y - start.y);
+
+      rubber.hidden = true;
+
+      if (w<4 || h<4) { // tiny drags ignored
+        return;
+      }
+      const rectPdf = cssToPdfRect(x,y,w,h);
+      const arr = redactions.get(currentPage) || [];
+      arr.push(rectPdf);
+      redactions.set(currentPage, arr);
+
+      renderPage(currentPage);
+    });
+
+    // double-click/tap → full page box
+    let lastTap = 0;
+    stage.addEventListener('pointerup', (e)=>{
+      const now = e.timeStamp || Date.now();
+      if (now - lastTap < 280) {
+        // full page
+        const rectPdf = cssToPdfRect(0,0,cssW,cssH);
+        const arr = redactions.get(currentPage) || [];
+        arr.push(rectPdf);
+        redactions.set(currentPage, arr);
+        renderPage(currentPage);
+      }
+      lastTap = now;
+    });
+
+    /* ---------- Apply redactions ---------- */
+    applyBtn.addEventListener('click', async ()=>{
+      if (!pdfDoc) return;
+      const f = fileEl.files?.[0];
+      if (!f) return setStatus('Choose a PDF first.');
+
+      setStatus('Applying redactions…');
+      applyBtn.disabled = true;
+
+      try{
+        const srcBytes = await f.arrayBuffer();
+        const src = await PDFLib.PDFDocument.load(srcBytes);
+        const out = await PDFLib.PDFDocument.create();
+
+        const total = src.getPageCount();
+        for (let i=0; i<total; i++){
+          const [copied] = await out.copyPages(src, [i]);
+          out.addPage(copied);
+        }
+
+        // draw rectangles
+        for (const [pg, boxes] of redactions.entries()){
+          const pageIdx = pg - 1;
+          if (pageIdx<0 || pageIdx>=out.getPageCount()) continue;
+          const p = out.getPage(pageIdx);
+          boxes.forEach(b=>{
+            p.drawRectangle({
+              x: b.left, y: b.bottom, width: b.width, height: b.height,
+              color: PDFLib.rgb(0,0,0), borderColor: PDFLib.rgb(0,0,0), borderWidth: 0
+            });
+          });
+        }
+
+        const bytes = await out.save();
+        const blob = new Blob([bytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'redacted.pdf'; a.click();
+
+        setStatus('Done. Downloaded redacted.pdf');
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        setStatus('Error applying redactions.');
+      }finally{
+        applyBtn.disabled = false;
+      }
+    });
+
+    // Handle resize (re-render to keep crisp & keep boxes aligned)
+    let resizeRAF = null;
+    window.addEventListener('resize', ()=>{
+      if (!pdfDoc) return;
+      cancelAnimationFrame(resizeRAF);
+      resizeRAF = requestAnimationFrame(()=>renderPage(currentPage));
+    });
+  </script>
+</body>
+</html>
