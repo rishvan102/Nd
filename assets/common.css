@@ -1,0 +1,327 @@
+/* -------- Theme Variables -------- */
+:root[data-theme="light"] {
+  --bg: #fafafa;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #6b7280;
+  --brand: #2563eb;
+  --ring: #93c5fd;
+  --border: #e5e7eb;
+  --shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+:root[data-theme="dark"] {
+  --bg: #0b0b0c;
+  --card: #141416;
+  --ink: #e8eaee;
+  --muted: #a1a1aa;
+  --brand: #60a5fa;
+  --ring: #1d4ed8;
+  --border: #26272b;
+  --shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+/* -------- Base -------- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;
+  color:var(--ink); background:var(--bg);
+}
+
+/* Focus */
+:focus-visible{outline:2px solid var(--ring); outline-offset:3px; border-radius:10px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+
+/* Header */
+.site{position:sticky;top:0;z-index:30;backdrop-filter:saturate(1.2) blur(8px);
+  background:linear-gradient(180deg, color-mix(in oklab, var(--bg), #fff 6%), transparent);
+  border-bottom:1px solid var(--border);}
+.site .brand{max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.logo{height:40px;width:40px;border-radius:12px;display:grid;place-items:center;font-size:22px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#fdfdfb,#f4f4f3);}
+.site h1{margin:0;font-size:1.4rem}
+.site p{margin:.15rem 0 0;color:var(--muted);font-size:.9rem}
+
+/* Quick row */
+.quick{max-width:1100px;margin:0 auto;padding:8px 16px 14px;display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;justify-content:space-between}
+.search{position:relative;flex:1;min-width:220px}
+.search input{width:100%;border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.65rem 1rem .65rem 2.2rem;border-radius:12px;}
+.search span{position:absolute;left:.7rem;top:.48rem;opacity:.7}
+
+/* Tabs */
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap}
+.tab{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.45rem .9rem;border-radius:999px;cursor:pointer;font-size:.9rem;}
+.tab.is-active{border-color:transparent;background:color-mix(in oklab,var(--brand) 18%,var(--card));box-shadow:var(--shadow)}
+
+/* Theme button */
+.theme-btn{border:1px solid var(--border);background:var(--card);border-radius:999px;padding:.45rem .7rem;font-size:1rem;cursor:pointer}
+
+/* Grid */
+.grid{max-width:1100px;margin:20px auto;padding:0 16px 28px;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:color-mix(in oklab,var(--border),#000 8%);}
+.card h3{margin:.15rem 0 .25rem;font-size:1rem}
+.card p{margin:0;font-size:.9rem;color:var(--muted)}
+.card.is-disabled{opacity:.6;pointer-events:none}
+
+/* Footer */
+.sitef{max-width:1100px;margin:0 auto;padding:20px 16px;border-top:1px solid var(--border);color:var(--muted);}
+/* ===== Cards: bigger, airy, professional ===== */
+.grid{
+  max-width:1100px;margin:22px auto;padding:0 16px 32px;
+  display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+}
+.card{
+  display:block;text-decoration:none;color:inherit;background:var(--card);
+  border:1px solid var(--border);border-radius:18px;padding:18px 18px 16px;
+  min-height:190px; /* <- bigger like the reference */
+  box-shadow:0 0 0 rgba(0,0,0,0);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+  position:relative; isolation:isolate; /* for sparkles */
+}
+.card h3{margin:.1rem 0 .35rem;font-size:1.05rem;display:flex;align-items:center;gap:.5rem}
+.card p{margin:0;color:var(--muted);font-size:.92rem;line-height:1.35}
+.card:hover{
+  transform:translateY(-3px) scale(1.01);
+  box-shadow:var(--shadow);
+  border-color:color-mix(in oklab,var(--border),#000 12%);
+  filter:saturate(1.05);
+}
+/* Funny “jelly” tap animation (applies when JS adds .jelly) */
+@keyframes nd-jelly{
+  0%{transform:scale(1)}40%{transform:scale(0.98,1.02)}
+  70%{transform:scale(1.02,0.98)}100%{transform:scale(1)}
+}
+.card.jelly{animation:nd-jelly .42s ease}
+
+/* Tiny sparkles on hover (pure CSS) */
+.card::after{
+  content:"✦"; position:absolute; right:14px; top:12px; opacity:0; font-size:14px;
+  transition:opacity .15s ease, transform .15s ease; transform:translateY(4px);
+}
+.card:hover::after{opacity:.9; transform:translateY(0) rotate(8deg)}
+
+/* Quote bar (motivational) */
+.quote-bar{
+  max-width:1100px;margin:8px auto 0;padding:0 16px 12px;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap
+}
+.quote{
+  flex:1;min-width:220px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:.6rem .75rem;color:var(--ink)
+}
+.quote em{color:var(--muted)}
+.quote-btn{
+  border:1px solid var(--border);background:var(--card);border-radius:12px;
+  padding:.55rem .8rem;cursor:pointer
+}
+
+/* Theme button stays visible near tabs on small screens */
+.theme-btn{border:1px solid var(--border);background:var(--card);border-radius:999px;padding:.45rem .7rem;font-size:1rem;cursor:pointer}
+
+/* ===== Rich Card Look (icon, layout, presence) ===== */
+.card{
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* title, desc, footer */
+  gap: .45rem;
+  padding: 18px 18px 14px 18px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  min-height: 190px; /* presence like ref */
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+  text-decoration: none;
+  color: inherit;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+  isolation: isolate;
+}
+
+.card:hover{
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: color-mix(in oklab, var(--border), #000 12%);
+  filter: saturate(1.03);
+}
+
+/* Icon bubble (from data-emoji) */
+.card::before{
+  content: attr(data-emoji);
+  position: absolute;
+  left: 16px; top: 14px;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  display: grid; place-items: center;
+  font-size: 18px; font-weight: 700;
+  background: color-mix(in oklab, var(--brand) 10%, var(--card));
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+
+/* Title & description shift right to clear the icon */
+.card h3{
+  margin: 0;
+  padding-left: 54px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+
+.card p{
+  margin: 0;
+  padding-left: 54px;
+  color: var(--muted);
+  font-size: .93rem;
+  line-height: 1.4;
+}
+
+/* Footer chip (category label) */
+.card::after{
+  content: attr(data-catlabel);
+  justify-self: start;
+  margin-top: .4rem;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--brand) 10%, var(--card));
+  border: 1px solid var(--border);
+  opacity: .9;
+}
+
+/* Rounded inner surface like your reference */
+.card{
+  background-image:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in oklab, var(--card), #fff 4%), transparent 60%),
+    radial-gradient(140% 100% at 0% 120%, color-mix(in oklab, var(--card), #000 2%), transparent 60%);
+}
+
+/* Subtle corner accent */
+.card:hover::before{
+  transform: translateY(-1px);
+}
+
+/* Optional: category color accents */
+.card[data-cat="docs"]::before,
+.card[data-cat="docs"]::after{ background: color-mix(in oklab, #a5b4fc 26%, var(--card)); }
+.card[data-cat="convert"]::before,
+.card[data-cat="convert"]::after{ background: color-mix(in oklab, #86efac 26%, var(--card)); }
+.card[data-cat="organize"]::before,
+.card[data-cat="organize"]::after{ background: color-mix(in oklab, #fde68a 28%, var(--card)); }
+.card[data-cat="edit"]::before,
+.card[data-cat="edit"]::after{ background: color-mix(in oklab, #fca5a5 26%, var(--card)); }
+.card[data-cat="secure"]::before,
+.card[data-cat="secure"]::after{ background: color-mix(in oklab, #c7d2fe 22%, var(--card)); }
+
+/* Keep disabled look consistent */
+.card.is-disabled{ opacity:.6; pointer-events:none; filter:grayscale(.05) }
+/* ===== Rich Card Look (icon badge + dense body) ===== */
+.grid{
+  max-width:1100px;margin:22px auto;padding:0 16px 32px;
+  display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+}
+
+.card{
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* title, desc, footer */
+  gap: .45rem;
+  padding: 18px 18px 14px 18px;
+  border-radius: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  min-height: 190px;  /* presence like reference */
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+  text-decoration: none;
+  color: inherit;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+  isolation: isolate;
+  background-image:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in oklab, var(--card), #fff 4%), transparent 60%),
+    radial-gradient(140% 100% at 0% 120%, color-mix(in oklab, var(--card), #000 2%), transparent 60%);
+}
+
+.card:hover{
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: color-mix(in oklab, var(--border), #000 12%);
+  filter: saturate(1.03);
+}
+
+/* Icon bubble from data-emoji */
+.card::before{
+  content: attr(data-emoji);
+  position: absolute;
+  left: 16px; top: 14px;
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  display: grid; place-items: center;
+  font-size: 18px; font-weight: 700;
+  background: color-mix(in oklab, var(--brand) 10%, var(--card));
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+
+/* Title & description shift right to clear badge */
+.card h3{
+  margin: 0;
+  padding-left: 54px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.card p{
+  margin: 0;
+  padding-left: 54px;
+  color: var(--muted);
+  font-size: .93rem;
+  line-height: 1.4;
+}
+
+/* Footer chip (category) */
+.card::after{
+  content: attr(data-catlabel);
+  justify-self: start;
+  margin-top: .4rem;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--brand) 10%, var(--card));
+  border: 1px solid var(--border);
+  opacity: .9;
+}
+
+/* Category accent colors */
+.card[data-cat="docs"]::before, .card[data-cat="docs"]::after{ background: color-mix(in oklab, #a5b4fc 26%, var(--card)); }
+.card[data-cat="convert"]::before, .card[data-cat="convert"]::after{ background: color-mix(in oklab, #86efac 26%, var(--card)); }
+.card[data-cat="organize"]::before, .card[data-cat="organize"]::after{ background: color-mix(in oklab, #fde68a 28%, var(--card)); }
+.card[data-cat="edit"]::before, .card[data-cat="edit"]::after{ background: color-mix(in oklab, #fca5a5 26%, var(--card)); }
+.card[data-cat="secure"]::before, .card[data-cat="secure"]::after{ background: color-mix(in oklab, #c7d2fe 22%, var(--card)); }
+
+.card.is-disabled{ opacity:.6; pointer-events:none; filter:grayscale(.05) }
+
+/* Fun micro-animations you already included will keep working */
+.card p {
+  margin: 0;
+  padding-left: 54px;
+  color: var(--muted);
+  font-size: .92rem;
+  line-height: 1.4;
+}
+
+/* Extra features section inside card */
+.card-features {
+  list-style: none;
+  margin: .35rem 0 0 54px;
+  padding: 0;
+  font-size: .82rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.card-features li::before {
+  content: "✔️";
+  margin-right: .35rem;
+  font-size: .78rem;
+  opacity: .75;
+}
