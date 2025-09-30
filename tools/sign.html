@@ -1,37 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>✍️ Sign PDF • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>✍️ Add Signature • NiceDay PDF Jar</title>
+
+  <!-- pdf.js (preview) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <!-- pdf-lib (export) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;}
+    .wrap{max-width:980px;margin:22px auto 40px;padding:0 16px}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+    .dz{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s}
+    .dz:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .dz:focus-visible{outline:none; box-shadow:var(--ring)}
+    .dz .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .dz strong{display:block}
+    .badge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    input[type="file"]{display:none}
+
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:720px){ .two,.three{grid-template-columns:1fr} }
+
+    .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--ink)}
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.02)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+
+    .previewWrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+    @media (max-width:900px){ .previewWrap{grid-template-columns:1fr} }
+    .canvasWrap{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:10px;display:grid;place-items:center}
+    #preview{max-width:100%;width:100%;height:auto;border-radius:8px;background:#fff}
+    .sigThumb{display:flex;align-items:center;gap:10px}
+    .sigThumb img{max-height:70px;border-radius:8px;border:1px solid var(--border);background:#fff;padding:6px}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>✍️ Add Signature</h1>
-    <p>Upload a PDF and a transparent PNG/JPG of your signature. It will be placed on every page.</p>
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>✍️ Add Signature</h1>
+          <p class="subtitle">Upload a PDF and a signature image, place it, preview, then download.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
-      <label>PDF File
+    <section class="card">
+      <div class="grid two">
+        <label for="pdfFile" class="dz" id="dzPdf" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+          <div class="ic">📄</div>
+          <div><strong>PDF file</strong><div class="subtitle">Single PDF</div></div>
+          <div id="pdfBadge" class="badge" hidden></div>
+        </label>
         <input id="pdfFile" type="file" accept="application/pdf" />
-      </label>
-      <label>Signature Image (PNG/JPG)
-        <input id="imgFile" type="file" accept="image/png,image/jpeg" />
-      </label>
 
-      <div class="grid three" style="margin-top:.75rem">
-        <label>Width (px)
-          <input id="sigWidth" type="number" value="120" class="input" />
+        <label for="imgFile" class="dz" id="dzImg" tabindex="0" aria-label="Drop your signature image here, or click to choose">
+          <div class="ic">✍️</div>
+          <div><strong>Signature image</strong><div class="subtitle">PNG with transparent background recommended</div></div>
+          <div id="imgBadge" class="badge" hidden></div>
+        </label>
+        <input id="imgFile" type="file" accept="image/png,image/jpeg,image/webp" />
+      </div>
+
+      <div class="grid three" style="margin-top:12px">
+        <label>Width (pt)
+          <input id="sigWidth" type="number" value="120" class="input" min="10" />
         </label>
         <label>Margin X (pt)
-          <input id="marginX" type="number" value="24" class="input" />
+          <input id="marginX" type="number" value="24" class="input" min="0" />
         </label>
         <label>Margin Y (pt)
-          <input id="marginY" type="number" value="24" class="input" />
+          <input id="marginY" type="number" value="24" class="input" min="0" />
         </label>
       </div>
 
-      <div class="grid two" style="margin-top:.5rem">
+      <div class="grid two" style="margin-top:8px">
         <label>Position
           <select id="pos" class="input">
             <option value="br">Bottom Right</option>
@@ -40,19 +126,181 @@
             <option value="tl">Top Left</option>
           </select>
         </label>
-        <label>Only first page?
+        <label style="display:flex;align-items:center;gap:.6rem">
           <input id="firstPageOnly" type="checkbox" />
+          Only first page
         </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Sign & Download</button>
-      <p id="status" class="status"></p>
-    </div>
+      <div class="previewWrap">
+        <div class="canvasWrap">
+          <canvas id="preview" width="800" height="600" aria-label="PDF preview canvas"></canvas>
+        </div>
+        <div class="canvasWrap">
+          <div class="sigThumb">
+            <strong>Signature preview:</strong>
+            <img id="sigThumb" alt="Signature thumbnail" />
+          </div>
+          <p class="hint">Preview shows page 1. Export applies settings to all pages unless “Only first page” is checked.</p>
+          <button id="go" class="cta">Sign &amp; Download</button>
+          <p id="status" class="status">Load a PDF and a signature to begin.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <!-- pdf-lib -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="sign.js"></script>
   <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ---- Theme ---- */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ---- Elements ---- */
+    const pdfInput = document.getElementById('pdfFile');
+    const imgInput = document.getElementById('imgFile');
+    const pdfBadge = document.getElementById('pdfBadge');
+    const imgBadge = document.getElementById('imgBadge');
+    const dzPdf = document.getElementById('dzPdf');
+    const dzImg = document.getElementById('dzImg');
+
+    const preview = document.getElementById('preview');
+    const pctx = preview.getContext('2d');
+    const sigThumb = document.getElementById('sigThumb');
+
+    const statusEl = document.getElementById('status');
+    const goBtn = document.getElementById('go');
+
+    const posEl = document.getElementById('pos');
+    const sigWidthEl = document.getElementById('sigWidth');
+    const marginXEl = document.getElementById('marginX');
+    const marginYEl = document.getElementById('marginY');
+    const firstOnlyEl = document.getElementById('firstPageOnly');
+
+    let pdfDoc = null;              // pdf.js document proxy (for preview)
+    let pdfBytesPreview = null;     // Uint8Array for pdf.js
+    let pdfBytesExport  = null;     // Uint8Array kept ONLY for pdf-lib (never handed to pdf.js)
+    let sigImage = null, sigAspect = 1;
+
+    function setBadge(el, name, size){ if(!name){ el.hidden=true; return; } const kb=Math.max(1,Math.round(size/1024)); el.textContent=`${name} • ${kb} KB`; el.hidden=false; }
+
+    function addDZ(dz, input){
+      dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); input.click(); }});
+      ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='color-mix(in oklab, var(--brand) 55%, #fff)';}));
+      ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='var(--border)';}));
+      dz.addEventListener('drop', e=>{
+        const f=e.dataTransfer?.files?.[0]; if(!f) return;
+        if(input===pdfInput && f.type!=='application/pdf') return;
+        if(input===imgInput && !f.type.startsWith('image/')) return;
+        input.files=e.dataTransfer.files; input.dispatchEvent(new Event('change'));
+      });
+    }
+    addDZ(dzPdf, pdfInput); addDZ(dzImg, imgInput);
+
+    /* ---- Loaders ---- */
+    pdfInput.addEventListener('change', async e=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      try{
+        setBadge(pdfBadge, f.name, f.size);
+        const ab = await f.arrayBuffer();
+        const bytes = new Uint8Array(ab);
+        // Keep TWO independent copies
+        pdfBytesPreview = bytes.slice();      // → preview (pdf.js)
+        pdfBytesExport  = bytes.slice();      // → export (pdf-lib), never pass to pdf.js
+        pdfDoc = await pdfjsLib.getDocument({ data: pdfBytesPreview }).promise;
+        statusEl.textContent = `PDF loaded: ${pdfDoc.numPages} page(s).`;
+        await renderPreview();
+      }catch(err){ console.error(err); statusEl.textContent='Failed to load PDF.'; }
+    });
+
+    imgInput.addEventListener('change', async e=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      setBadge(imgBadge, f.name, f.size);
+      const url = URL.createObjectURL(f);
+      sigImage = new Image();
+      sigImage.onload = ()=>{ sigAspect = sigImage.width / sigImage.height; sigThumb.src = url; renderPreview(); };
+      sigImage.src = url;
+    });
+
+    /* ---- Preview (page 1) ---- */
+    async function renderPreview(){
+      if(!pdfDoc){ pctx.clearRect(0,0,preview.width,preview.height); return; }
+      const page = await pdfDoc.getPage(1);
+      const desired = Math.min(760, page.getViewport({scale:1}).width);
+      const viewport = page.getViewport({ scale: desired / page.getViewport({scale:1}).width });
+      preview.width = Math.round(viewport.width); preview.height = Math.round(viewport.height);
+      pctx.fillStyle='#fff'; pctx.fillRect(0,0,preview.width,preview.height);
+      await page.render({ canvasContext:pctx, viewport }).promise;
+
+      if(sigImage){
+        const widthPt=+sigWidthEl.value||0, mx=+marginXEl.value||0, my=+marginYEl.value||0;
+        if(widthPt>0){
+          const wPx = widthPt * viewport.scale, hPx = wPx / sigAspect;
+          const offX = mx * viewport.scale, offY = my * viewport.scale;
+          let x=0,y=0;
+          switch(posEl.value){
+            case 'br': x=preview.width-wPx-offX; y=preview.height-hPx-offY; break;
+            case 'bl': x=offX; y=preview.height-hPx-offY; break;
+            case 'tr': x=preview.width-wPx-offX; y=offY; break;
+            case 'tl': x=offX; y=offY; break;
+          }
+          pctx.save(); pctx.globalAlpha=.95; pctx.drawImage(sigImage,x,y,wPx,hPx); pctx.restore();
+        }
+      }
+    }
+    [posEl,sigWidthEl,marginXEl,marginYEl].forEach(el=> el.addEventListener('input', renderPreview));
+
+    /* ---- Export (pdf-lib) ---- */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      if(!pdfBytesExport){ statusEl.textContent='Choose a PDF first.'; return; }
+      if(!imgInput.files?.[0]){ statusEl.textContent='Choose a signature image.'; return; }
+      statusEl.textContent='Applying signature…';
+
+      try{
+        // Use ONLY the export copy (never touched by pdf.js)
+        const src = await PDFLib.PDFDocument.load(pdfBytesExport);
+
+        const imgFile = imgInput.files[0];
+        const imgBytes = new Uint8Array(await imgFile.arrayBuffer());
+        const isPng = (imgFile.type||'').includes('png');
+        const sig = isPng ? await src.embedPng(imgBytes) : await src.embedJpg(imgBytes);
+
+        const widthPt = Math.max(1, +sigWidthEl.value||120);
+        const s = widthPt / sig.width;
+        const drawW = widthPt, drawH = sig.height * s;
+        const marginX = Math.max(0, +marginXEl.value||0);
+        const marginY = Math.max(0, +marginYEl.value||0);
+        const pos = posEl.value;
+
+        const count = src.getPageCount();
+        const targets = firstOnlyEl.checked ? [0] : Array.from({length:count},(_,i)=>i);
+
+        for(const i of targets){
+          const page = src.getPage(i);
+          const pw = page.getWidth(), ph = page.getHeight();
+          let x=0,y=0;
+          switch(pos){
+            case 'br': x = pw - drawW - marginX; y = marginY; break;                 // origin bottom-left
+            case 'bl': x = marginX;             y = marginY; break;
+            case 'tr': x = pw - drawW - marginX; y = ph - drawH - marginY; break;
+            case 'tl': x = marginX;             y = ph - drawH - marginY; break;
+          }
+          page.drawImage(sig, { x, y, width: drawW, height: drawH });
+        }
+
+        const bytes = await src.save();
+        const blob = new Blob([bytes], {type:'application/pdf'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='signed.pdf'; a.click();
+        statusEl.textContent=`Done. Signed ${targets.length} page(s).`;
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent='Failed to sign PDF.';
+      }
+    });
+  </script>
 </body>
 </html>
