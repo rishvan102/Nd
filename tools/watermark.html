@@ -1,43 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>💧 Watermark PDF • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <style>
+    /* ===== Theme ===== */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    /* ===== Base ===== */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial}
+    .wrap{max-width:980px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    /* Card */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    /* Drop zone */
+    .dz{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s}
+    .dz:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .dz:focus-visible{outline:none; box-shadow:var(--ring)}
+    .dz .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .dz strong{display:block}
+    input[type="file"]{display:none}
+    .badge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* Inputs */
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:720px){ .two,.three{grid-template-columns:1fr} }
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input, textarea{
+      width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:var(--card);color:var(--ink)
+    }
+    .input:focus, textarea:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+
+    /* Preview */
+    .previewWrap{margin-top:12px;display:grid;gap:10px}
+    .pvBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    canvas#pv{width:100%;max-width:100%;background:#fff;border:1px solid var(--border);border-radius:12px}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>💧 Add Watermark</h1>
-    <p>Apply a transparent text watermark across all pages of your PDF.</p>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>💧 Add Watermark</h1>
+          <p class="subtitle">Transparent text watermark with live preview and tiled mode.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
-      <label>PDF File
-        <input id="pdfFile" type="file" accept="application/pdf" />
+    <!-- Tool -->
+    <section class="card">
+      <!-- drop zone -->
+      <label for="file" class="dz" id="dz" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div><strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">We’ll preview page 1</div>
+        </div>
+        <div id="badge" class="badge" hidden></div>
       </label>
+      <input id="file" type="file" accept="application/pdf" />
 
-      <label style="margin-top:.5rem; display:block;">
-        Watermark Text
+      <!-- settings -->
+      <label style="display:block;margin-top:.5rem;">
+        Watermark text
         <input id="wmText" class="input" placeholder="CONFIDENTIAL" value="CONFIDENTIAL" />
       </label>
 
-      <div class="grid three" style="margin-top:.5rem">
-        <label>Font Size
-          <input id="size" type="number" class="input" value="48" />
+      <div class="grid three">
+        <label>Font size (pt)
+          <input id="size" type="number" class="input" value="48" min="6" max="200" />
         </label>
         <label>Opacity (0–1)
-          <input id="opacity" type="number" class="input" step="0.1" value="0.2" />
+          <input id="opacity" type="number" class="input" step="0.05" min="0.05" max="1" value="0.2" />
         </label>
-        <label>Angle (deg)
+        <label>Angle (°)
           <input id="angle" type="number" class="input" value="45" />
         </label>
       </div>
 
-      <div class="grid two" style="margin-top:.5rem">
+      <div class="grid two">
         <label>Mode
           <select id="mode" class="input">
             <option value="single">Single (center)</option>
-            <option value="tile">Tiled across page</option>
+            <option value="tile" selected>Tiled across page</option>
           </select>
         </label>
         <label>Color
@@ -45,14 +141,295 @@
         </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Apply & Download</button>
-      <p id="status" class="status"></p>
-    </div>
+      <div class="grid two">
+        <label>Tile spacing (pt) — for tiled mode
+          <input id="spacing" type="number" class="input" value="140" />
+        </label>
+        <label>Pages (leave empty for all)
+          <input id="pages" class="input" placeholder="e.g. 1-3,6,9" />
+        </label>
+      </div>
+
+      <!-- Preview -->
+      <div class="previewWrap">
+        <div class="pvBar">
+          <strong>Preview (Page 1)</strong>
+          <span id="pvMsg" class="hint">Load a PDF to see the preview.</span>
+        </div>
+        <canvas id="pv" width="900" height="1200" aria-label="Preview canvas"></canvas>
+      </div>
+
+      <!-- Action -->
+      <button id="go" class="cta">Apply &amp; Download</button>
+      <p id="status" class="status" aria-live="polite">Choose a PDF to start.</p>
+      <p class="hint">Tip: Live preview respects angle/opacity/color. Export applies to chosen pages (or all).</p>
+    </section>
   </main>
 
-  <!-- pdf-lib -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="watermark.js"></script>
+  <!-- optional celebration -->
   <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ===== Theme ===== */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ===== Elements ===== */
+    const fileEl = document.getElementById('file');
+    const dz = document.getElementById('dz');
+    const badge = document.getElementById('badge');
+    const statusEl = document.getElementById('status');
+    const pv = document.getElementById('pv');
+    const pvCtx = pv.getContext('2d', { willReadFrequently:true });
+    const pvMsg = document.getElementById('pvMsg');
+
+    const wmTextEl = document.getElementById('wmText');
+    const sizeEl = document.getElementById('size');
+    const opacityEl = document.getElementById('opacity');
+    const angleEl = document.getElementById('angle');
+    const modeEl = document.getElementById('mode');
+    const colorEl = document.getElementById('color');
+    const spacingEl = document.getElementById('spacing');
+    const pagesEl = document.getElementById('pages');
+    const goBtn = document.getElementById('go');
+
+    /* ===== State ===== */
+    let srcBytes = null;      // Uint8Array (never hand the same buffer to pdf.js worker)
+    let pageCount = 0;
+    let renderTask = null;
+    let debounceTimer = null;
+
+    function setBadge(name, size){
+      if(!name){ badge.hidden=true; return; }
+      const kb=Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden=false;
+    }
+    function freshBytes(){ return srcBytes ? srcBytes.slice(0) : null; } // avoid detached ArrayBuffer
+
+    /* ===== Drag/drop ===== */
+    dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileEl.click(); }});
+    ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='color-mix(in oklab, var(--brand) 55%, #fff)';}));
+    ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='var(--border)';}));
+    dz.addEventListener('drop', e=>{
+      const f=e.dataTransfer?.files?.[0]; if(f && f.type==='application/pdf'){ fileEl.files=e.dataTransfer.files; fileEl.dispatchEvent(new Event('change')); }
+    });
+
+    /* ===== Load PDF ===== */
+    fileEl.addEventListener('change', async e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      setBadge(f.name, f.size);
+      statusEl.textContent='Reading PDF…';
+      try{
+        const ab = await f.arrayBuffer();
+        srcBytes = new Uint8Array(ab);
+        const doc = await PDFLib.PDFDocument.load(srcBytes);
+        pageCount = doc.getPageCount();
+        statusEl.textContent=`Loaded ${pageCount} page(s). Adjust settings and preview updates live.`;
+        pvMsg.textContent = 'Rendering preview…';
+        schedulePreview();
+      }catch(err){
+        console.error(err);
+        srcBytes = null; pageCount = 0;
+        statusEl.textContent='Failed to read PDF.';
+        pvMsg.textContent = 'Failed to preview.';
+      }
+    });
+
+    /* ===== Helpers ===== */
+    function hexToRgb(hex){
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if(!m) return {r:0,g:0,b:0};
+      return { r:parseInt(m[1],16)/255, g:parseInt(m[2],16)/255, b:parseInt(m[3],16)/255 };
+    }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function parseRanges(str, max){
+      if(!str) return null;
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).filter(Boolean).forEach(p=>{
+        if(p.includes('-')){
+          let [a,b] = p.split('-').map(Number);
+          if(Number.isFinite(a)&&Number.isFinite(b)){
+            a=clamp(a,1,max); b=clamp(b,1,max); if(b<a)[a,b]=[b,a];
+            for(let i=a;i<=b;i++) out.add(i);
+          }
+        }else{
+          const n=Number(p); if(Number.isFinite(n)) out.add(clamp(n,1,max));
+        }
+      });
+      const arr=[...out].sort((x,y)=>x-y);
+      return arr.length?arr:null;
+    }
+
+    /* ===== Live Preview (pdf.js) ===== */
+    async function loadPreview(){
+      if(!srcBytes){ pvCtx.clearRect(0,0,pv.width,pv.height); pvMsg.textContent='Load a PDF to preview.'; return; }
+      try{
+        if (renderTask) { try{ renderTask.cancel(); await renderTask.promise; } catch(_){} renderTask=null; }
+
+        const data = freshBytes(); if (!data) return;
+        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const page = await doc.getPage(1);
+
+        const baseVp = page.getViewport({ scale: 1 });
+        const scale = pv.width / baseVp.width;
+        const vp = page.getViewport({ scale });
+        pv.height = Math.ceil(vp.height);
+
+        pvCtx.save();
+        pvCtx.clearRect(0,0,pv.width,pv.height);
+
+        renderTask = page.render({ canvasContext: pvCtx, viewport: vp });
+        await renderTask.promise; renderTask = null;
+
+        overlayWatermarkOnCanvas(pvCtx, pv.width, pv.height);
+        pvCtx.restore();
+        pvMsg.textContent = '';
+      }catch(err){
+        console.error(err);
+        pvMsg.textContent = 'Preview failed.';
+        renderTask = null;
+      }
+    }
+    function schedulePreview(){ clearTimeout(debounceTimer); debounceTimer = setTimeout(loadPreview, 150); }
+
+    function overlayWatermarkOnCanvas(ctx, cW, cH){
+      const text = wmTextEl.value || '';
+      if(!text) return;
+
+      const px = Number(sizeEl.value)||48;
+      const op = clamp(Number(opacityEl.value)||0.2, 0.05, 1);
+      const ang = (Number(angleEl.value)||0) * Math.PI/180;
+      const color = colorEl.value;
+      const mode = modeEl.value;
+      const spacing = Math.max(40, Number(spacingEl.value)||140);
+
+      ctx.save();
+      ctx.globalAlpha = op;
+      ctx.fillStyle = color;
+
+      // scale font a bit with canvas width to feel similar to export
+      const scaleFont = cW / 600;
+      ctx.font = `${px * scaleFont}px Helvetica, Arial, sans-serif`;
+
+      if (mode === 'single'){
+        // center
+        ctx.translate(cW/2, cH/2);
+        ctx.rotate(ang);
+        const w = ctx.measureText(text).width;
+        ctx.fillText(text, -w/2, px*scaleFont/2);
+      } else {
+        // tiled grid: rotate the canvas, then draw on a grid that covers the diagonal
+        ctx.translate(cW/2, cH/2);
+        ctx.rotate(ang);
+
+        // Work in a rotated space; draw across an enlarged rect to cover page corners
+        const diag = Math.sqrt(cW*cW + cH*cH);
+        const start = -diag/2, end = diag/2;
+        for(let y = start; y <= end; y += spacing){
+          for(let x = start; x <= end; x += spacing){
+            ctx.fillText(text, x, y);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    /* preview reactions */
+    [wmTextEl,sizeEl,opacityEl,angleEl,modeEl,colorEl,spacingEl,pagesEl].forEach(el=>{
+      el.addEventListener('input', schedulePreview);
+      el.addEventListener('change', schedulePreview);
+    });
+
+    /* ===== Apply & Download (pdf-lib) ===== */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      if (!srcBytes){ statusEl.textContent='Please load a PDF first.'; return; }
+
+      try{
+        statusEl.textContent='Applying watermark…';
+        goBtn.disabled = true;
+
+        const text = wmTextEl.value || '';
+        const size = Number(sizeEl.value)||48;
+        const op = clamp(Number(opacityEl.value)||0.2, 0.05, 1);
+        const ang = Number(angleEl.value)||0;
+        const color = hexToRgb(colorEl.value);
+        const mode = modeEl.value;
+        const spacing = Math.max(40, Number(spacingEl.value)||140);
+
+        const src = await PDFLib.PDFDocument.load(srcBytes);
+        const font = await src.embedFont(PDFLib.StandardFonts.Helvetica);
+        const total = src.getPageCount();
+        const ranges = parseRanges(pagesEl.value, total);
+        const applyPages = ranges ?? Array.from({length:total},(_,i)=>i+1);
+
+        for (const pNo of applyPages){
+          const page = src.getPage(pNo-1);
+          const { width:W, height:H } = page.getSize();
+
+          if (mode === 'single'){
+            const w = font.widthOfTextAtSize(text, size);
+            const h = size;
+            page.drawText(text, {
+              x: (W - w)/2,
+              y: (H - h)/2,
+              size,
+              font,
+              color: PDFLib.rgb(color.r, color.g, color.b),
+              opacity: op,
+              rotate: PDFLib.degrees(ang)
+            });
+          } else {
+            // Tiled: rotate grid around center and stamp across extended bbox
+            const diag = Math.sqrt(W*W + H*H);
+            const start = -diag/2, end = diag/2;
+            const cos = Math.cos(ang*Math.PI/180), sin = Math.sin(ang*Math.PI/180);
+
+            for(let gy = start; gy <= end; gy += spacing){
+              for(let gx = start; gx <= end; gx += spacing){
+                // rotate (gx,gy) back into page coords around center (cx,cy)
+                const cx = W/2, cy = H/2;
+                const rx = gx*cos - gy*sin + cx;
+                const ry = gx*sin + gy*cos + cy;
+
+                page.drawText(text, {
+                  x: rx,
+                  y: ry,
+                  size,
+                  font,
+                  color: PDFLib.rgb(color.r, color.g, color.b),
+                  opacity: op,
+                  rotate: PDFLib.degrees(ang),
+                  xSkew: PDFLib.degrees(0),
+                  ySkew: PDFLib.degrees(0),
+                  // anchor around text baseline-left; shift back by half text for nicer centering
+                  // (optional: uncomment for more centered tiles)
+                  // x: rx - font.widthOfTextAtSize(text, size)/2,
+                  // y: ry - size/2,
+                });
+              }
+            }
+          }
+        }
+
+        const bytes = await src.save();
+        const blob = new Blob([bytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'watermarked.pdf'; a.click();
+        statusEl.textContent = 'Done. Downloaded watermarked.pdf';
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to apply watermark.';
+      }finally{
+        goBtn.disabled = false;
+      }
+    });
+
+    // initial preview clean
+    pvCtx.clearRect(0,0,pv.width,pv.height);
+  </script>
 </body>
 </html>
