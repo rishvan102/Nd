@@ -1,27 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>🏷️ Add Text Stamp • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <style>
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial
+    }
+    .wrap{max-width:980px;margin:22px auto 40px;padding:0 16px}
+
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    .dz{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s}
+    .dz:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .dz:focus-visible{outline:none; box-shadow:var(--ring)}
+    .dz .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .dz strong{display:block}
+    input[type="file"]{display:none}
+    .badge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .four{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:860px){ .four{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media (max-width:640px){ .two,.three{grid-template-columns:1fr} }
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input, textarea{
+      width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:var(--card);color:var(--ink)
+    }
+    .input:focus, textarea:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+    textarea{min-height:80px;resize:vertical}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.85rem}
+    .chip:hover{filter:brightness(1.03)}
+
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+
+    .previewWrap{margin-top:12px;display:grid;gap:10px}
+    .pvBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    canvas#pv{width:100%;max-width:100%;background:#fff;border:1px solid var(--border);border-radius:12px}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>🏷️ Add Text Stamp</h1>
-    <p>Apply a small text label on every page of your PDF.</p>
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>🏷️ Add Text Stamp</h1>
+          <p class="subtitle">Apply a small text label on each page. Live preview included.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
-      <label>PDF File
-        <input id="pdfFile" type="file" accept="application/pdf" />
+    <section class="card">
+      <label for="file" class="dz" id="dz" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div><strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">We’ll show a preview of page 1</div>
+        </div>
+        <div id="badge" class="badge" hidden></div>
       </label>
+      <input id="file" type="file" accept="application/pdf" />
 
-      <label style="margin-top:.5rem; display:block;">
-        Stamp Text
-        <input id="stampText" class="input" placeholder="Reviewed ✓" value="Reviewed ✓" />
-      </label>
+      <div class="grid two">
+        <label>Stamp text
+          <textarea id="stampText" placeholder="Reviewed ✓">Reviewed ✓</textarea>
+        </label>
+        <div class="grid two">
+          <label>Font
+            <select id="font" class="input">
+              <option value="Helvetica">Helvetica</option>
+              <option value="TimesRoman">Times (Serif)</option>
+              <option value="Courier">Courier (Mono)</option>
+            </select>
+          </label>
+          <label>Font size (pt)
+            <input id="size" type="number" class="input" value="12" min="6" max="96" />
+          </label>
+          <label>Color
+            <input id="color" type="color" class="input" value="#2563eb" />
+          </label>
+          <label>Opacity (0–1)
+            <input id="opacity" type="number" class="input" step="0.05" min="0.1" max="1" value="0.9" />
+          </label>
+        </div>
+      </div>
 
-      <div class="grid three" style="margin-top:.5rem">
+      <div class="grid four">
         <label>Position
           <select id="pos" class="input">
             <option value="br">Bottom Right</option>
@@ -30,24 +144,327 @@
             <option value="tr">Top Right</option>
             <option value="tc">Top Center</option>
             <option value="tl">Top Left</option>
+            <option value="c">Center</option>
           </select>
         </label>
-        <label>Font Size
-          <input id="size" type="number" class="input" value="10" />
+        <label>Margin X (pt)
+          <input id="marginX" type="number" class="input" value="24" />
         </label>
-        <label>Margin (pt)
-          <input id="margin" type="number" class="input" value="16" />
+        <label>Margin Y (pt)
+          <input id="marginY" type="number" class="input" value="24" />
+        </label>
+        <label>Rotation (°)
+          <input id="rotation" type="number" class="input" value="0" />
         </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Stamp & Download</button>
-      <p id="status" class="status"></p>
-    </div>
+      <div class="grid two">
+        <label>Pages (leave empty for all)
+          <input id="pages" class="input" placeholder="e.g. 1-3,6,9" />
+        </label>
+        <label class="row">Extras
+          <span class="chip" id="chipWatermark">Watermark style (center, 30% opacity, 30pt)</span>
+        </label>
+      </div>
+
+      <div class="previewWrap">
+        <div class="pvBar">
+          <strong>Preview (Page 1)</strong>
+          <span id="pvMsg" class="hint">Load a PDF to see the preview.</span>
+        </div>
+        <canvas id="pv" width="900" height="1200" aria-label="Preview canvas"></canvas>
+      </div>
+
+      <button id="go" class="cta">Stamp &amp; Download</button>
+      <p id="status" class="status" aria-live="polite">Choose a PDF to start.</p>
+      <p class="hint">Tip: 72 pt = 1 inch. “Pages” accepts ranges (e.g., <b>2-4,7,9</b>). Live preview shows only page 1.</p>
+    </section>
   </main>
 
-  <!-- pdf-lib -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="stamp.js"></script>
   <script src="../assets/celebrate.js"></script>
+
+  <script>
+    /* ===== Theme ===== */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ===== Elements & State ===== */
+    const fileEl = document.getElementById('file');
+    const dz = document.getElementById('dz');
+    const badge = document.getElementById('badge');
+    const statusEl = document.getElementById('status');
+    const pv = document.getElementById('pv');
+    const pvCtx = pv.getContext('2d', { willReadFrequently:true });
+    const pvMsg = document.getElementById('pvMsg');
+
+    const stampTextEl = document.getElementById('stampText');
+    const fontEl = document.getElementById('font');
+    const sizeEl = document.getElementById('size');
+    const colorEl = document.getElementById('color');
+    const opacityEl = document.getElementById('opacity');
+    const posEl = document.getElementById('pos');
+    const mxEl = document.getElementById('marginX');
+    const myEl = document.getElementById('marginY');
+    const rotEl = document.getElementById('rotation');
+    const pagesEl = document.getElementById('pages');
+    const chipWatermark = document.getElementById('chipWatermark');
+    const goBtn = document.getElementById('go');
+
+    let srcBytes = null;   // Uint8Array safe copy for pdf.js & pdf-lib
+    let pageCount = 0;
+    let renderTask = null;
+    let debounceTimer = null;
+
+    function setBadge(name, size){
+      if(!name){ badge.hidden=true; return; }
+      const kb=Math.max(1, Math.round(size/1024));
+      badge.textContent = `${name} • ${kb} KB`;
+      badge.hidden=false;
+    }
+    function freshBytes(){ return srcBytes ? srcBytes.slice(0) : null; }
+
+    /* ===== Drag/drop ===== */
+    dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileEl.click(); }});
+    ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='color-mix(in oklab, var(--brand) 55%, #fff)';}));
+    ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='var(--border)';}));
+    dz.addEventListener('drop', e=>{
+      const f=e.dataTransfer?.files?.[0]; if(f && f.type==='application/pdf'){ fileEl.files=e.dataTransfer.files; fileEl.dispatchEvent(new Event('change')); }
+    });
+
+    /* ===== Load PDF ===== */
+    fileEl.addEventListener('change', async e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      setBadge(f.name, f.size);
+      statusEl.textContent='Reading PDF…';
+      try{
+        const ab = await f.arrayBuffer();
+        srcBytes = new Uint8Array(ab);
+        const doc = await PDFLib.PDFDocument.load(srcBytes);
+        pageCount = doc.getPageCount();
+        statusEl.textContent=`Loaded ${pageCount} page(s). Adjust settings and preview updates live.`;
+        pvMsg.textContent = 'Rendering preview…';
+        schedulePreview();
+      }catch(err){
+        console.error(err);
+        srcBytes = null; pageCount = 0;
+        statusEl.textContent='Failed to read PDF.';
+        pvMsg.textContent = 'Failed to preview.';
+      }
+    });
+
+    /* ===== Helpers ===== */
+    function hexToRgb(hex){
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if(!m) return {r:0,g:0,b:0};
+      return { r:parseInt(m[1],16)/255, g:parseInt(m[2],16)/255, b:parseInt(m[3],16)/255 };
+    }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function parseRanges(str, max){
+      if(!str) return null;
+      const out = new Set();
+      str.split(',').map(s=>s.trim()).filter(Boolean).forEach(p=>{
+        if(p.includes('-')){
+          let [a,b] = p.split('-').map(Number);
+          if(Number.isFinite(a) && Number.isFinite(b)){
+            a = clamp(a,1,max); b = clamp(b,1,max);
+            if(b<a) [a,b] = [b,a];
+            for(let i=a;i<=b;i++) out.add(i);
+          }
+        }else{
+          const n=Number(p); if(Number.isFinite(n)) out.add(clamp(n,1,max));
+        }
+      });
+      const arr=[...out].sort((x,y)=>x-y);
+      return arr.length?arr:null;
+    }
+
+    /* 
+      PDF coordinates (bottom-left): used for final stamping
+    */
+    function getPdfPos(pageW, pageH, textW, textH, pos, mx, my){
+      switch(pos){
+        case 'tl': return { x: mx, y: pageH - my - textH };
+        case 'tc': return { x: (pageW - textW)/2, y: pageH - my - textH };
+        case 'tr': return { x: pageW - mx - textW, y: pageH - my - textH };
+        case 'bl': return { x: mx, y: my };
+        case 'bc': return { x: (pageW - textW)/2, y: my };
+        case 'br': return { x: pageW - mx - textW, y: my };
+        case 'c':  return { x: (pageW - textW)/2, y: (pageH - textH)/2 };
+        default:   return { x: pageW - mx - textW, y: my };
+      }
+    }
+
+    /*
+      Canvas preview coordinates (top-left): used only for overlay on <canvas>
+      NOTE: this is why you saw top/bottom inverted before.
+    */
+    function getCanvasPosTopLeft(cW, cH, textW, textH, pos, mx, my){
+      switch(pos){
+        case 'tl': return { x: mx, y: my };
+        case 'tc': return { x: (cW - textW)/2, y: my };
+        case 'tr': return { x: cW - mx - textW, y: my };
+        case 'bl': return { x: mx, y: cH - my - textH };
+        case 'bc': return { x: (cW - textW)/2, y: cH - my - textH };
+        case 'br': return { x: cW - mx - textW, y: cH - my - textH };
+        case 'c' : return { x: (cW - textW)/2, y: (cH - textH)/2 };
+        default  : return { x: cW - mx - textW, y: cH - my - textH };
+      }
+    }
+
+    /* ===== Live Preview (pdf.js) ===== */
+    async function loadPreview(){
+      if(!srcBytes){ pvCtx.clearRect(0,0,pv.width,pv.height); pvMsg.textContent='Load a PDF to preview.'; return; }
+      try{
+        if (renderTask) { try{ renderTask.cancel(); await renderTask.promise; } catch(_){} renderTask=null; }
+
+        const data = freshBytes(); if (!data) return;
+        const doc = await pdfjsLib.getDocument({ data }).promise;
+        const page = await doc.getPage(1);
+
+        const baseVp = page.getViewport({ scale: 1 });
+        const scale = pv.width / baseVp.width;
+        const vp = page.getViewport({ scale });
+        pv.height = Math.ceil(vp.height);
+
+        pvCtx.save();
+        pvCtx.clearRect(0,0,pv.width,pv.height);
+
+        renderTask = page.render({ canvasContext: pvCtx, viewport: vp });
+        await renderTask.promise; renderTask = null;
+
+        overlayStampOnCanvas(pvCtx, pv.width, pv.height);
+        pvCtx.restore();
+        pvMsg.textContent = '';
+      }catch(err){
+        console.error(err);
+        pvMsg.textContent = 'Preview failed.';
+        renderTask = null;
+      }
+    }
+    function schedulePreview(){ clearTimeout(debounceTimer); debounceTimer = setTimeout(loadPreview, 150); }
+
+    function overlayStampOnCanvas(ctx, cW, cH){
+      const text = stampTextEl.value || '';
+      if(!text) return;
+
+      const px = Number(sizeEl.value)||12;
+      const rot = (Number(rotEl.value)||0) * Math.PI/180;
+      const pos = posEl.value;
+      const mx = Number(mxEl.value)||0;
+      const my = Number(myEl.value)||0;
+      const op = clamp(Number(opacityEl.value)||1, 0.05, 1);
+      const color = colorEl.value;
+
+      ctx.save();
+      ctx.globalAlpha = op;
+
+      const fam = fontEl.value === 'TimesRoman' ? 'Times New Roman, Times, serif'
+               : fontEl.value === 'Courier' ? 'Courier New, Courier, monospace'
+               : 'Helvetica, Arial, sans-serif';
+      ctx.font = `${px * (cW/600)}px ${fam}`;
+      ctx.fillStyle = color;
+
+      const lines = text.split('\n');
+      const lh = px * (cW/600) * 1.2;
+      const maxW = Math.max(...lines.map(l=> ctx.measureText(l).width));
+      const totalH = lh * lines.length;
+
+      // map margins roughly (pt-ish feel) for preview
+      const scalePt = cW / 600;
+      const { x, y } = getCanvasPosTopLeft(cW, cH, maxW, totalH, pos, mx*scalePt, my*scalePt);
+
+      ctx.translate(x, y);
+      if (rot) ctx.rotate(rot);
+      for (let i=0;i<lines.length;i++){
+        // draw from top to bottom in canvas coords
+        ctx.fillText(lines[i], 0, (i+1)*lh);
+      }
+      ctx.restore();
+    }
+
+    [stampTextEl,fontEl,sizeEl,colorEl,opacityEl,posEl,mxEl,myEl,rotEl,pagesEl].forEach(el=>{
+      el.addEventListener('input', schedulePreview);
+      el.addEventListener('change', schedulePreview);
+    });
+
+    chipWatermark.addEventListener('click', ()=>{
+      posEl.value = 'c';
+      opacityEl.value = '0.3';
+      sizeEl.value = '30';
+      rotEl.value = '0';
+      schedulePreview();
+    });
+
+    /* ===== Apply & Download (pdf-lib) ===== */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      if (!srcBytes){ statusEl.textContent='Please load a PDF first.'; return; }
+      try{
+        statusEl.textContent='Stamping…';
+        goBtn.disabled = true;
+
+        const text = stampTextEl.value || '';
+        const color = hexToRgb(colorEl.value);
+        const size = Number(sizeEl.value)||12;
+        const op = clamp(Number(opacityEl.value)||1, 0.05, 1);
+        const pos = posEl.value;
+        const mx = Number(mxEl.value)||0;
+        const my = Number(myEl.value)||0;
+        const rotation = PDFLib.degrees(Number(rotEl.value)||0);
+
+        const src = await PDFLib.PDFDocument.load(srcBytes);
+        let fontRef;
+        switch(fontEl.value){
+          case 'TimesRoman': fontRef = await src.embedFont(PDFLib.StandardFonts.TimesRoman); break;
+          case 'Courier':    fontRef = await src.embedFont(PDFLib.StandardFonts.Courier); break;
+          default:           fontRef = await src.embedFont(PDFLib.StandardFonts.Helvetica); break;
+        }
+
+        const total = src.getPageCount();
+        const ranges = parseRanges(pagesEl.value, total);
+        const applyPages = ranges ?? Array.from({length:total},(_,i)=>i+1); // 1-based
+
+        for (const pNo of applyPages){
+          const page = src.getPage(pNo-1);
+          const { width:W, height:H } = page.getSize();
+
+          const lines = text.split('\n');
+          const widths = lines.map(l => fontRef.widthOfTextAtSize(l, size));
+          const maxW = Math.max(...widths, 0);
+          const totalH = size * 1.2 * lines.length;
+
+          const { x, y } = getPdfPos(W, H, maxW, totalH, pos, mx, my);
+
+          for (let i=0;i<lines.length;i++){
+            page.drawText(lines[i], {
+              x,
+              y: y + (totalH - (i+1)*size*1.2) + size*0.85, // baseline correction
+              size,
+              font: fontRef,
+              color: PDFLib.rgb(color.r, color.g, color.b),
+              opacity: op,
+              rotate: rotation
+            });
+          }
+        }
+
+        const bytes = await src.save();
+        const blob = new Blob([bytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'stamped.pdf'; a.click();
+        statusEl.textContent = 'Done. Downloaded stamped.pdf';
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to stamp PDF.';
+      }finally{
+        goBtn.disabled = false;
+      }
+    });
+
+    // initial preview clear
+    pvCtx.clearRect(0,0,pv.width,pv.height);
+  </script>
 </body>
 </html>
