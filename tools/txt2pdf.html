@@ -1,20 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Text/Markdown → PDF • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>📄 Text/Markdown → PDF • NiceDay PDF Jar</title>
+
+  <!-- Prevent favicon 404 -->
+  <link rel="icon" href="data:,">
+
+  <!-- libs: regenerator (before fontkit), pdf-lib, fontkit, SortableJS -->
+  <script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.11/runtime.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+  <style>
+    :root[data-theme="light"]{--bg:#f7f8fb;--card:#fff;--ink:#0f172a;--muted:#667085;--border:#e6eaf0;--brand:#2563eb;--brand-2:#60a5fa;--ring:0 0 0 4px rgba(37,99,235,.14);--shadow:0 10px 26px rgba(2,6,23,.06);--chip-bg:color-mix(in oklab,var(--card),#000 2%)}
+    :root[data-theme="dark"]{--bg:#0c1020;--card:#0f1428;--ink:#e7e9f2;--muted:#a1a8c5;--border:#1d274a;--brand:#7aa2ff;--brand-2:#a9c2ff;--ring:0 0 0 4px rgba(122,162,255,.18);--shadow:0 12px 30px rgba(0,0,0,.45);--chip-bg:#0b1020}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{max-width:980px;margin:22px auto 40px;padding:0 16px}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    /* Drop zone + file list */
+    .dz{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s}
+    .dz:hover{border-color:color-mix(in oklab,var(--brand) 55%,#fff)}
+    .dz:focus-visible{outline:none; box-shadow:var(--ring)}
+    .dz .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    input[type="file"]{display:none}
+    .badge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .filelist{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);cursor:grab}
+    .chip .name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .chip .btn{border:0;background:transparent;cursor:pointer;color:var(--muted)}
+
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:680px){.two,.three{grid-template-columns:1fr}}
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input, select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--ink)}
+    .input:focus, select:focus{outline:none;box-shadow:var(--ring);border-color:var(--brand)}
+
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg,var(--brand),color-mix(in oklab,var(--brand) 75%,#fff));box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+    small.badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:var(--chip-bg);color:var(--muted)}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>📄 Text/Markdown → PDF</h1>
-    <p>Upload one or more <code>.txt</code>/<code>.md</code> files. Each file becomes a section.</p>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📄 Text/Markdown → PDF</h1>
+          <p class="subtitle">Drop .txt/.md files • Reorder • Unicode/Tamil ready</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
-      <label>Files
-        <input id="files" type="file" accept=".txt,.md,text/plain,text/markdown" multiple />
+    <!-- Tool -->
+    <section class="card">
+      <!-- Drop zone -->
+      <label for="files" class="dz" id="dz" tabindex="0" aria-label="Drop .txt/.md here, or click to choose">
+        <div class="ic">📄</div>
+        <div><strong>Drop .txt/.md here, or click to choose</strong>
+          <div class="subtitle">You can add multiple files then drag to reorder</div>
+        </div>
+        <div id="badge" class="badge" hidden></div>
       </label>
+      <input id="files" type="file" accept=".txt,.md,text/plain,text/markdown" multiple />
+
+      <div id="filelist" class="filelist" aria-live="polite"></div>
 
       <div class="grid two" style="margin-top:.75rem">
         <label>Document Title (optional)
@@ -27,34 +101,339 @@
 
       <div class="grid three" style="margin-top:.5rem">
         <label>Font
-          <select id="font" class="input">
-            <option value="Helvetica" selected>Helvetica</option>
-            <option value="Times">Times</option>
-            <option value="Courier">Courier</option>
-          </select>
+          <select id="font" class="input"></select>
         </label>
-        <label>Body size
-          <input id="fontSize" type="number" class="input" value="11" />
+        <label>Body size (pt)
+          <input id="fontSize" type="number" class="input" value="11" min="8" max="48" />
         </label>
         <label>Margins (pt)
-          <input id="margin" type="number" class="input" value="36" />
+          <input id="margin" type="number" class="input" value="40" min="20" max="120" />
         </label>
       </div>
 
-      <div class="grid two" style="margin-top:.5rem">
-        <label><input id="pageBreaks" type="checkbox" checked /> Page break between files</label>
-        <label><input id="useMdHeadings" type="checkbox" checked /> Treat <code>#</code> headings as larger text</label>
+      <div class="grid three">
+        <label>Page size
+          <select id="pageSize" class="input">
+            <option value="A4">A4 (595×842)</option>
+            <option value="Letter">Letter (612×792)</option>
+          </select>
+        </label>
+        <label>Heading scale
+          <select id="headingScale" class="input">
+            <option value="1.4">1.4× (default)</option>
+            <option value="1.2">1.2×</option>
+            <option value="1.6">1.6×</option>
+            <option value="1.8">1.8×</option>
+          </select>
+        </label>
+        <label>Line spacing (×)
+          <input id="lineHeight" type="number" step="0.1" class="input" value="1.35" min="1" max="2" />
+        </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Create PDF</button>
-      <p id="status" class="status"></p>
-      <p class="hint">Tip: 72 pt = 1 inch. A4 is ~595×842 pt. Filenames become section headers.</p>
-    </div>
+      <div class="grid two">
+        <label class="row"><input id="pageBreaks" type="checkbox" checked /> <span>Page break between files</span></label>
+        <label class="row"><input id="useMdHeadings" type="checkbox" checked /> <span>Interpret Markdown headings (#, ##, ###)</span></label>
+      </div>
+
+      <button id="go" class="cta">Create PDF</button>
+      <p id="status" class="status" aria-live="polite">Add files to begin.</p>
+      <p class="hint">Tip: We auto-pick a Unicode font (e.g., Noto Sans Tamil) if your text contains non-Latin characters. You can override it above.</p>
+    </section>
   </main>
 
-  <!-- jsPDF (client-side only) -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="txt2pdf.js"></script>
-  <script src="../assets/celebrate.js"></script>
+  <script>
+    /* ===== Theme ===== */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ===== Fonts (edit paths as needed) ===== */
+    const FONT_CATALOG = [
+      { value:'Helvetica',            label:'Helvetica (Latin-only)', type:'standard' },
+      { value:'TimesRoman',           label:'Times (Latin-only)',     type:'standard' },
+      { value:'Courier',              label:'Courier (Latin-only)',   type:'standard' },
+      { value:'NotoSans-Regular',     label:'Noto Sans Regular',      type:'file', path:'./fonts/NotoSans-Regular.ttf' },
+      { value:'NotoSans-Bold',        label:'Noto Sans Bold',         type:'file', path:'./fonts/NotoSans-Bold.ttf' },
+      { value:'NotoSansTamil-Regular',label:'Noto Sans Tamil (தமிழ்)', type:'file', path:'./fonts/NotoSansTamil-Regular.ttf' },
+      { value:'CustomUpload',         label:'Custom .ttf/.otf (coming soon)', type:'disabled' },
+    ];
+    const fontSel = document.getElementById('font');
+    FONT_CATALOG.filter(f=>f.type!=='disabled').forEach(f=>{
+      const o=document.createElement('option'); o.value=f.value; o.textContent=f.label; fontSel.appendChild(o);
+    });
+
+    /* ===== Elements ===== */
+    const dz = document.getElementById('dz');
+    const filesInput = document.getElementById('files');
+    const filelist = document.getElementById('filelist');
+    const badge = document.getElementById('badge');
+
+    const outNameEl = document.getElementById('outName');
+    const docTitleEl = document.getElementById('docTitle');
+    const pageBreaksEl = document.getElementById('pageBreaks');
+    const useMdHeadingsEl = document.getElementById('useMdHeadings');
+    const fontSizeEl = document.getElementById('fontSize');
+    const marginEl = document.getElementById('margin');
+    const headingScaleEl = document.getElementById('headingScale');
+    const pageSizeEl = document.getElementById('pageSize');
+    const lineHeightEl = document.getElementById('lineHeight');
+    const statusEl = document.getElementById('status');
+    const goBtn = document.getElementById('go');
+
+    /* ===== File list state ===== */
+    /** @type {{name:string, file:File, id:string}[]} */
+    const items = [];
+    function uid(){ return Math.random().toString(36).slice(2,9); }
+
+    function setBadge(){
+      if(!items.length){ badge.hidden=true; return; }
+      const total = items.length;
+      const names = items.map(x=>x.name).slice(0,3).join(', ') + (items.length>3?'…':'');
+      badge.textContent = `${total} file(s): ${names}`;
+      badge.hidden=false;
+    }
+    function renderList(){
+      filelist.innerHTML = '';
+      items.forEach(it=>{
+        const chip = document.createElement('div');
+        chip.className = 'chip'; chip.dataset.id = it.id; chip.title = 'Drag to reorder';
+        chip.innerHTML = `<span>↕</span><span class="name">${it.name}</span><button class="btn" title="Remove">✕</button>`;
+        chip.querySelector('.btn').addEventListener('click', ()=>{
+          const idx = items.findIndex(x=>x.id===it.id);
+          if (idx>=0){ items.splice(idx,1); renderList(); setBadge(); }
+        });
+        filelist.appendChild(chip);
+      });
+    }
+    // Sortable (drag to reorder)
+    new Sortable(filelist, { animation:150, onEnd(){
+      const order = [...filelist.children].map(el=> el.dataset.id);
+      items.sort((a,b)=> order.indexOf(a.id) - order.indexOf(b.id));
+      setBadge();
+    }});
+
+    // Drop/add files
+    dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); filesInput.click(); }});
+    ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='color-mix(in oklab, var(--brand) 55%, #fff)';}));
+    ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='var(--border)';}));
+    dz.addEventListener('drop', e=>{
+      const list = [...(e.dataTransfer?.files||[])].filter(f=>/\.md$|\.txt$/i.test(f.name));
+      addFiles(list);
+    });
+    filesInput.addEventListener('change', e=>{
+      const list = [...(e.target.files||[])].filter(f=>/\.md$|\.txt$/i.test(f.name));
+      addFiles(list);
+      filesInput.value = '';
+    });
+    function addFiles(list){
+      for (const f of list) items.push({ name:f.name, file:f, id:uid() });
+      renderList(); setBadge();
+      statusEl.textContent = items.length ? 'Files ready. Configure options, then Create PDF.' : 'Add files to begin.';
+    }
+
+    /* ===== Markdown → blocks (very small parser) ===== */
+    // Returns array of {type:'h1'|'h2'|'h3'|'p'|'li', text:string}
+    function mdToBlocks(content, useHeadings){
+      const lines = content.replace(/\r\n/g,'\n').split('\n');
+      const blocks = [];
+      let buf = [];
+      function flushP(){ if (buf.length){ blocks.push({type:'p', text:buf.join(' ').trim()}); buf=[]; } }
+      for (let raw of lines){
+        const line = raw.trimEnd();
+        if (!line.trim()){ flushP(); continue; }
+        if (useHeadings){
+          const m = /^(#{1,3})\s+(.*)$/.exec(line);
+          if (m){ flushP(); const lvl=m[1].length; blocks.push({ type: 'h'+lvl, text: m[2].trim() }); continue; }
+        }
+        const li = /^[-*]\s+(.*)$/.exec(line);
+        if (li){ flushP(); blocks.push({type:'li', text: li[1].trim()}); continue; }
+        buf.push(line.trim());
+      }
+      flushP();
+      return blocks;
+    }
+
+    /* ===== Helpers ===== */
+    function hasTamil(s){ return /\p{Script=Tamil}/u.test(s); }
+    function hasNonLatin(s){ return /[^\u0000-\u00FF]/.test(s); }
+
+    async function fetchFirst(paths) {
+      for (const p of paths) {
+        try { const res = await fetch(p, { cache:'force-cache' }); if (res.ok) return new Uint8Array(await res.arrayBuffer()); }
+        catch(_) {}
+      }
+      throw new Error('Font not found at: ' + paths.join(', '));
+    }
+    async function embedFileFont(doc, primaryPath){
+      const candidates = [
+        primaryPath,
+        '../' + primaryPath.replace(/^\.\//,''),
+        '/' + primaryPath.replace(/^(\.\/|\/)/,'')
+      ];
+      const bytes = await fetchFirst(candidates);
+      return await doc.embedFont(bytes, { subset:true });
+    }
+
+    /* ===== Create PDF ===== */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      if (!items.length){ statusEl.textContent='Please add at least one .txt/.md file.'; return; }
+      goBtn.disabled = true;
+      statusEl.textContent = 'Building PDF…';
+
+      try{
+        // Read files as text in current order
+        const sections = [];
+        for (const it of items){
+          const txt = await it.file.text();
+          sections.push({ name: it.name.replace(/\.(txt|md)$/i,''), text: txt });
+        }
+
+        // Decide default font based on content
+        const allText = sections.map(s=>s.text).join('\n');
+        let defaultFont = 'NotoSans-Regular';
+        if (hasTamil(allText)) defaultFont = 'NotoSansTamil-Regular';
+        else if (hasNonLatin(allText)) defaultFont = 'NotoSans-Regular';
+
+        // Respect manual selection unless “Latin-only” with non-Latin content
+        let chosen = FONT_CATALOG.find(f=>f.value===fontSel.value) || FONT_CATALOG[0];
+        if (chosen.type==='standard' && hasNonLatin(allText)){
+          chosen = FONT_CATALOG.find(f=>f.value===defaultFont) || chosen;
+          fontSel.value = chosen.value;
+          statusEl.textContent = 'Non-Latin detected — switched to Unicode font automatically.';
+        }
+
+        // Create doc and embed fonts
+        const doc = await PDFLib.PDFDocument.create();
+        doc.registerFontkit(fontkit);
+
+        const sizes = { A4:{w:595.28,h:841.89}, Letter:{w:612,h:792} };
+        const { w:PW, h:PH } = sizes[pageSizeEl.value] || sizes.A4;
+        const margin = Math.max(20, Math.min(120, Number(marginEl.value)||40));
+        const bodySize = Math.max(8, Math.min(48, Number(fontSizeEl.value)||11));
+        const lh = Math.max(1, Number(lineHeightEl.value)||1.35);
+        const headingScale = Number(headingScaleEl.value)||1.4;
+
+        // Fonts
+        let bodyFont;
+        if (chosen.type==='standard'){
+          if (chosen.value==='TimesRoman') bodyFont = await doc.embedFont(PDFLib.StandardFonts.TimesRoman);
+          else if (chosen.value==='Courier') bodyFont = await doc.embedFont(PDFLib.StandardFonts.Courier);
+          else bodyFont = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        } else {
+          bodyFont = await embedFileFont(doc, chosen.path);
+        }
+        const boldFont = (chosen.value==='NotoSans-Regular')
+          ? await embedFileFont(doc, './fonts/NotoSans-Bold.ttf')
+          : bodyFont;
+
+        // Metadata
+        const title = (docTitleEl.value || '').trim();
+        if (title) doc.setTitle(title);
+
+        let page = doc.addPage([PW, PH]);
+        let cursorY = PH - margin;
+        const usableW = PW - 2*margin;
+
+        function addPage(){ page = doc.addPage([PW, PH]); cursorY = PH - margin; }
+
+        function drawTextLine(line, font, size){
+          const w = font.widthOfTextAtSize(line, size);
+          page.drawText(line, { x: margin, y: cursorY - size, size, font });
+          cursorY -= size*lh;
+        }
+
+        function wrapLines(text, font, size, maxW){
+          if (!text) return [''];
+          const words = text.split(/\s+/);
+          const lines=[]; let line='';
+          for (const word of words){
+            const test = line? line+' '+word : word;
+            if (font.widthOfTextAtSize(test, size) <= maxW){ line = test; }
+            else{
+              if (line) lines.push(line);
+              if (font.widthOfTextAtSize(word, size) > maxW){
+                // hard wrap long token
+                let tmp='';
+                for (const ch of word){
+                  const t2 = tmp+ch;
+                  if (font.widthOfTextAtSize(t2, size) <= maxW) tmp=t2;
+                  else { lines.push(tmp); tmp=ch; }
+                }
+                line=tmp;
+              } else line = word;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        }
+
+        // Title page heading (optional)
+        if (title){
+          const tSize = Math.min(32, bodySize*1.8);
+          const w = bodyFont.widthOfTextAtSize(title, tSize);
+          page.drawText(title, { x:(PW - w)/2, y: cursorY - tSize, size:tSize, font: boldFont });
+          cursorY -= tSize*1.8;
+        }
+
+        // Each section
+        for (let sIdx=0; sIdx<sections.length; sIdx++){
+          const s = sections[sIdx];
+          // Section header (filename)
+          const name = s.name;
+          const hSize = Math.min(26, bodySize*headingScale);
+          const w = boldFont.widthOfTextAtSize(name, hSize);
+          if (cursorY - hSize < margin) addPage();
+          page.drawText(name, { x: margin, y: cursorY - hSize, size: hSize, font: boldFont });
+          cursorY -= hSize*1.2;
+
+          // Parse markdown
+          const blocks = mdToBlocks(s.text, useMdHeadingsEl.checked);
+
+          // Draw blocks
+          for (const b of blocks){
+            const isHeading = b.type==='h1' || b.type==='h2' || b.type==='h3';
+            const fnt = isHeading ? boldFont : bodyFont;
+            const size = isHeading
+              ? Math.min(28, bodySize * (b.type==='h1' ? headingScale : b.type==='h2' ? (headingScale*0.9) : (headingScale*0.8)))
+              : bodySize;
+
+            const bullet = (b.type==='li') ? '• ' : '';
+            const text = bullet + b.text;
+
+            const lines = wrapLines(text, fnt, size, usableW);
+            for (const line of lines){
+              if (cursorY - size < margin) addPage();
+              drawTextLine(line, fnt, size);
+            }
+            cursorY -= isHeading ? size*0.3 : bodySize*0.15; // small gap
+          }
+
+          if (pageBreaksEl.checked && sIdx < sections.length-1){
+            addPage();
+          } else {
+            cursorY -= bodySize*0.6;
+          }
+        }
+
+        // Save
+        const bytes = await doc.save();
+        const blob = new Blob([bytes], { type:'application/pdf' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        let out = (outNameEl.value||'notes.pdf').trim();
+        if (!/\.pdf$/i.test(out)) out += '.pdf';
+        a.download = out; a.click();
+
+        statusEl.textContent = `Done. Downloaded ${out}`;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to create PDF. Check console for details and make sure fonts are served from /tools/fonts/.';
+      }finally{
+        goBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
