@@ -1,43 +1,380 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>📝 Write Note → PDF • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- Prevent favicon 404 -->
+  <link rel="icon" href="data:,">
+
+  <!-- Polyfill MUST come before fontkit -->
+  <script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.11/runtime.min.js"></script>
+
+  <!-- pdf-lib + fontkit (for Unicode fonts) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.js"></script>
+
+  <style>
+    :root[data-theme="light"]{--bg:#f7f8fb;--card:#fff;--ink:#0f172a;--muted:#667085;--border:#e6eaf0;--brand:#2563eb;--ring:0 0 0 4px rgba(37,99,235,.14);--shadow:0 10px 26px rgba(2,6,23,.06);--chip-bg:color-mix(in oklab,var(--card),#000 2%)}
+    :root[data-theme="dark"]{--bg:#0c1020;--card:#0f1428;--ink:#e7e9f2;--muted:#a1a8c5;--border:#1d274a;--brand:#7aa2ff;--ring:0 0 0 4px rgba(122,162,255,.18);--shadow:0 12px 30px rgba(0,0,0,.45);--chip-bg:#0b1020}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{max-width:980px;margin:22px auto 40px;padding:0 16px}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),#60a5fa)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .four{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:860px){.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:680px){.two,.three{grid-template-columns:1fr}}
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--ink)}
+    .input:focus,textarea:focus{outline:none;box-shadow:var(--ring);border-color:var(--brand)}
+    textarea{min-height:160px;resize:vertical}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .chip{border:1px solid var(--border);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.85rem}
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;background:linear-gradient(90deg,var(--brand),color-mix(in oklab,var(--brand) 75%,#fff));box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+    .counts{color:var(--muted);font-size:12px;margin-top:4px}
+    small.badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:var(--chip-bg);color:var(--muted)}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>📝 Write a Note → PDF</h1>
-    <p>Type or paste your note — we’ll wrap it neatly onto A4 pages.</p>
+  <main class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>📝 Write a Note → PDF</h1>
+          <p class="subtitle">Local font picker • Tamil/Unicode ready (auto-detect)</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
-      <label>Title (optional)
-        <input id="noteTitle" class="input" placeholder="My Notes" />
-      </label>
-
-      <label style="margin-top:.5rem; display:block;">
-        Note Content
-        <textarea id="noteInput" rows="12" class="input" placeholder="Type your note here…"></textarea>
-      </label>
-
-      <div class="grid two" style="margin-top:.5rem">
-        <label>Font Size
-          <input id="fontSize" type="number" class="input" value="12" />
+    <section class="card">
+      <div class="grid two">
+        <label>Title (optional)
+          <input id="noteTitle" class="input" placeholder="My Notes" />
         </label>
-        <label>Margins (pt)
-          <input id="margin" type="number" class="input" value="40" />
+        <label>Author (optional)
+          <input id="author" class="input" placeholder="Your name" />
         </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Create PDF</button>
-      <p id="status" class="status"></p>
-    </div>
+      <label style="margin-top:.5rem; display:block;">
+        Note content
+        <textarea id="noteInput" class="input" placeholder="Type here… (தமிழ் எழுதலாம்)"></textarea>
+        <div class="counts" id="counts">0 characters • 0 words</div>
+      </label>
+
+      <div class="grid four">
+        <label>Font
+          <select id="font" class="input"></select>
+        </label>
+        <label>Font size (pt)
+          <input id="fontSize" type="number" class="input" value="12" min="8" max="48" />
+        </label>
+        <label>Line spacing (×)
+          <input id="lineHeight" type="number" step="0.1" class="input" value="1.4" min="1" max="2" />
+        </label>
+        <label>Text color
+          <input id="color" type="color" class="input" value="#111827" />
+        </label>
+      </div>
+
+      <div class="grid four">
+        <label>Page size
+          <select id="pageSize" class="input">
+            <option value="A4">A4 (595×842 pt)</option>
+            <option value="Letter">Letter (612×792 pt)</option>
+          </select>
+        </label>
+        <label>Margins (pt)
+          <input id="margin" type="number" class="input" value="40" min="20" max="120" />
+        </label>
+        <label>Align
+          <select id="align" class="input">
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </label>
+        <label>Filename
+          <input id="fileName" class="input" placeholder="notes" value="notes" />
+        </label>
+      </div>
+
+      <div class="grid three">
+        <label class="row"><input id="showTitle" type="checkbox" checked /> <span>Print title on first page</span></label>
+        <label class="row"><input id="pageNumbers" type="checkbox" /> <span>Add page numbers (footer)</span></label>
+        <label>Upload custom font <small class="badge">.ttf / .otf</small>
+          <input id="fontFile" type="file" accept=".ttf,.otf" class="input" />
+        </label>
+      </div>
+
+      <div class="row" style="margin-top:.25rem">
+        <button id="go" class="cta">Create PDF</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+      <p class="hint">Tip: Just type. We auto-pick Noto Sans Tamil for தமிழ் or a Unicode font for other scripts. You can still choose a font manually.</p>
+    </section>
   </main>
 
-  <!-- pdf-lib -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="write.js"></script>
-  <script src="../assets/celebrate.js"></script>
+  <script>
+    /* ===== Theme ===== */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ===== Font catalog (you can add more) ===== */
+    const FONT_CATALOG = [
+      { value:'Helvetica',            label:'Helvetica (Latin-only)', type:'standard' },
+      { value:'TimesRoman',           label:'Times (Latin-only)',     type:'standard' },
+      { value:'Courier',              label:'Courier (Latin-only)',   type:'standard' },
+      { value:'NotoSans-Regular',     label:'Noto Sans Regular',      type:'file', path:'./fonts/NotoSans-Regular.ttf' },
+      { value:'NotoSans-Bold',        label:'Noto Sans Bold',         type:'file', path:'./fonts/NotoSans-Bold.ttf' },
+      { value:'NotoSansTamil-Regular',label:'Noto Sans Tamil (தமிழ்)', type:'file', path:'./fonts/NotoSansTamil-Regular.ttf' },
+      { value:'NotoSansSymbols2-Regular',label:'Noto Sans Symbols 2', type:'file', path:'./fonts/NotoSansSymbols2-Regular.ttf' },
+      { value:'CustomUpload',         label:'Custom .ttf/.otf (upload below)', type:'custom' },
+    ];
+    const fontSelect = document.getElementById('font');
+    FONT_CATALOG.forEach(f=> {
+      const opt = document.createElement('option');
+      opt.value = f.value; opt.textContent = f.label;
+      fontSelect.appendChild(opt);
+    });
+
+    /* ===== Elements ===== */
+    const noteTitle = document.getElementById('noteTitle');
+    const author = document.getElementById('author');
+    const noteInput = document.getElementById('noteInput');
+    const counts = document.getElementById('counts');
+    const fontSizeEl = document.getElementById('fontSize');
+    const lineHeightEl = document.getElementById('lineHeight');
+    const colorEl = document.getElementById('color');
+    const pageSizeEl = document.getElementById('pageSize');
+    const marginEl = document.getElementById('margin');
+    const alignEl = document.getElementById('align');
+    const fileNameEl = document.getElementById('fileName');
+    const showTitleEl = document.getElementById('showTitle');
+    const pageNumbersEl = document.getElementById('pageNumbers');
+    const fontFileEl = document.getElementById('fontFile');
+    const goBtn = document.getElementById('go');
+    const statusEl = document.getElementById('status');
+
+    function updateCounts(){
+      const s = noteInput.value;
+      const words = (s.trim().match(/\S+/g) || []).length;
+      counts.textContent = `${s.length} characters • ${words} words`;
+    }
+    noteInput.addEventListener('input', updateCounts); updateCounts();
+
+    function needsUnicode(text){ for (let i=0;i<text.length;i++) if (text.charCodeAt(i) > 255) return true; return false; }
+    function hasTamil(s){ return /\p{Script=Tamil}/u.test(s); }
+    function hasNonLatin(s){ return /[^\u0000-\u00FF]/.test(s); }
+
+    async function getCustomFontBytes(){ const f = fontFileEl.files?.[0]; if (!f) return null; const ab = await f.arrayBuffer(); return new Uint8Array(ab); }
+    function hexToRgb(hex){ const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return m?{r:parseInt(m[1],16)/255,g:parseInt(m[2],16)/255,b:parseInt(m[3],16)/255}:{r:0,g:0,b:0}; }
+
+    // fetch from first available location
+    async function fetchFirst(paths) {
+      for (const p of paths) {
+        try {
+          const res = await fetch(p, { cache: 'force-cache' });
+          if (res.ok) return new Uint8Array(await res.arrayBuffer());
+        } catch(_) {}
+      }
+      throw new Error('Font not found at: ' + paths.join(', '));
+    }
+    // embed helper bound to a specific doc
+    async function embedFileFont(doc, primaryPathOrBytes){
+      if (primaryPathOrBytes instanceof Uint8Array) {
+        return await doc.embedFont(primaryPathOrBytes, { subset:true });
+      }
+      const candidates = [
+        primaryPathOrBytes,                              // ./fonts/...
+        '../' + primaryPathOrBytes.replace(/^\.\//,''),  // ../fonts/...
+        '/' + primaryPathOrBytes.replace(/^(\.\/|\/)/,'')// /fonts/...
+      ];
+      const bytes = await fetchFirst(candidates);
+      return await doc.embedFont(bytes, { subset:true });
+    }
+
+    /* ===== Auto font detection (fast path) ===== */
+    let userTouchedFont = false;
+    fontSelect.addEventListener('change', ()=>{ userTouchedFont = true; });
+
+    function autoPickFontFromText() {
+      if (userTouchedFont) return; // respect manual choice
+      const text = (noteInput.value + '\n' + noteTitle.value).trim();
+      let desired = null;
+
+      if (hasTamil(text)) {
+        desired = FONT_CATALOG.find(f=>f.value==='NotoSansTamil-Regular');
+      } else if (hasNonLatin(text)) {
+        desired = FONT_CATALOG.find(f=>f.value==='NotoSans-Regular');
+      } else {
+        desired = FONT_CATALOG.find(f=>f.value==='NotoSans-Regular');
+      }
+      if (desired && fontSelect.value !== desired.value) {
+        fontSelect.value = desired.value;
+        statusEl.textContent = `Font auto-selected: ${desired.label}`;
+      }
+    }
+    let autoPickTimer = null;
+    function scheduleAutoPick(){ clearTimeout(autoPickTimer); autoPickTimer = setTimeout(autoPickFontFromText, 180); }
+    noteInput.addEventListener('input', scheduleAutoPick);
+    noteTitle.addEventListener('input', scheduleAutoPick);
+    autoPickFontFromText();
+
+    /* ===== Create PDF ===== */
+    document.getElementById('go').addEventListener('click', async ()=>{
+      try{
+        goBtn.disabled = true;
+        statusEl.textContent = 'Creating…';
+        console.clear();
+
+        const sizes = { A4:{w:595.28,h:841.89}, Letter:{w:612,h:792} };
+        const { w:PW, h:PH } = sizes[pageSizeEl.value] || sizes.A4;
+
+        const doc = await PDFLib.PDFDocument.create();
+        doc.registerFontkit(fontkit);
+
+        const metaTitle = (noteTitle.value || '').trim();
+        const metaAuthor = (author.value || '').trim();
+        if (metaTitle) doc.setTitle(metaTitle);
+        if (metaAuthor) doc.setAuthor(metaAuthor);
+
+        const content = (noteInput.value || '').replace(/\r\n/g, '\n');
+        const wantUnicode = needsUnicode(content) || needsUnicode(metaTitle);
+
+        // choose / embed font
+        const chosen = FONT_CATALOG.find(f=>f.value===fontSelect.value) || FONT_CATALOG[0];
+        let fontRef, usedFontLabel = chosen.label;
+
+        if (chosen.type === 'standard' && wantUnicode){
+          const tamil = FONT_CATALOG.find(f=>f.value==='NotoSansTamil-Regular');
+          fontRef = await embedFileFont(doc, tamil.path);
+          usedFontLabel = tamil.label + ' (auto)';
+          statusEl.textContent = 'Non-Latin detected — switched to Unicode font.';
+        } else if (chosen.type === 'standard'){
+          if (chosen.value === 'TimesRoman') fontRef = await doc.embedFont(PDFLib.StandardFonts.TimesRoman);
+          else if (chosen.value === 'Courier') fontRef = await doc.embedFont(PDFLib.StandardFonts.Courier);
+          else fontRef = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+        } else if (chosen.type === 'file'){
+          fontRef = await embedFileFont(doc, chosen.path);
+        } else { // custom
+          const custom = await getCustomFontBytes();
+          if (custom) { fontRef = await embedFileFont(doc, custom); usedFontLabel = 'Custom upload'; }
+          else {
+            const tamil = FONT_CATALOG.find(f=>f.value==='NotoSansTamil-Regular');
+            fontRef = await embedFileFont(doc, tamil.path);
+            usedFontLabel = tamil.label + ' (fallback)';
+          }
+        }
+
+        const rgb = hexToRgb(colorEl.value);
+        const size = Math.max(8, Math.min(48, Number(fontSizeEl.value)||12));
+        const lh = Math.max(1, Number(lineHeightEl.value)||1.4) * size;
+        const M = Math.max(20, Math.min(120, Number(marginEl.value)||40));
+        const maxTextWidth = PW - 2*M;
+
+        const paragraphs = content.split('\n');
+        let page = doc.addPage([PW, PH]);
+        let cursorY = PH - M;
+        const pagesArr = [page];
+
+        // Title
+        if (metaTitle && showTitleEl.checked){
+          const titleSize = Math.min(size * 1.6, 32);
+          const w = fontRef.widthOfTextAtSize(metaTitle, titleSize);
+          page.drawText(metaTitle, { x:(PW-w)/2, y: cursorY - titleSize, size:titleSize, font:fontRef, color:PDFLib.rgb(rgb.r,rgb.g,rgb.b) });
+          cursorY -= (titleSize + lh*0.5);
+        }
+
+        function wrapParagraph(text){
+          if (text.trim()==='') return [''];
+          const words = text.split(/\s+/);
+          const lines = [];
+          let line = '';
+          for (const word of words){
+            const test = line ? (line + ' ' + word) : word;
+            const width = fontRef.widthOfTextAtSize(test, size);
+            if (width <= maxTextWidth){ line = test; }
+            else{
+              if (line) lines.push(line);
+              if (fontRef.widthOfTextAtSize(word, size) > maxTextWidth){
+                let tmp = '';
+                for (const ch of word){
+                  const t2 = tmp + ch;
+                  if (fontRef.widthOfTextAtSize(t2, size) <= maxTextWidth) tmp = t2;
+                  else { lines.push(tmp); tmp = ch; }
+                }
+                line = tmp;
+              } else line = word;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        }
+
+        function drawLine(line){
+          const w = fontRef.widthOfTextAtSize(line, size);
+          let x = M;
+          if (alignEl.value === 'center') x = M + (maxTextWidth - w)/2;
+          if (alignEl.value === 'right')  x = M + (maxTextWidth - w);
+          page.drawText(line, { x, y: cursorY - size, size, font: fontRef, color: PDFLib.rgb(rgb.r,rgb.g,rgb.b) });
+          cursorY -= lh;
+        }
+
+        for (const para of paragraphs){
+          const lines = wrapParagraph(para);
+          for (const line of lines){
+            if (cursorY - size < M){ page = doc.addPage([PW, PH]); pagesArr.push(page); cursorY = PH - M; }
+            drawLine(line);
+          }
+          cursorY -= lh*0.3;
+          if (cursorY - size < M){ page = doc.addPage([PW, PH]); pagesArr.push(page); cursorY = PH - M; }
+        }
+
+        if (pageNumbersEl.checked){
+          const total = pagesArr.length;
+          const numSize = Math.max(9, Math.min(12, size-1));
+          for (let i=0;i<total;i++){
+            const pg = pagesArr[i];
+            const label = `${i+1} / ${total}`;
+            const w = fontRef.widthOfTextAtSize(label, numSize);
+            pg.drawText(label, { x:(PW-w)/2, y: M*0.5, size:numSize, font:fontRef, color:PDFLib.rgb(rgb.r,rgb.g,rgb.b) });
+          }
+        }
+
+        const bytes = await doc.save();
+        const blob = new Blob([bytes], { type:'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const base = (fileNameEl.value || 'notes').replace(/[^\w\-]+/g,'_');
+        a.href = url; a.download = `${base}.pdf`; a.click();
+
+        statusEl.textContent = `Done. Downloaded ${a.download} • Font: ${usedFontLabel}`;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = 'Failed to create PDF. Open DevTools → Console for details.';
+      }finally{
+        goBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
