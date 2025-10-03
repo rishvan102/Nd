@@ -4,189 +4,425 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>NiceDay PDF Jar — Fast PDF tools</title>
+
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="assets/common.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+
+  <!-- Paint with the correct theme before first render -->
+  <script>
+    (function () {
+      const root = document.documentElement, KEY = 'nd-theme';
+      try {
+        const saved = localStorage.getItem(KEY);
+        const initial = saved || (matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-theme', initial);
+      } catch { root.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+
   <style>
-    body {
-      background: linear-gradient(135deg, #f9fafc 0%, #eef2f9 100%);
-      animation: fadeIn 0.5s ease;
-    }
-    /* Brand */
-    .brand .logo img {
-      width: 42px; height: 42px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,.1);
-    }
-    /* Cards */
-    .card {
-      transition: transform .2s ease, box-shadow .2s ease;
-      background: #fff;
-    }
-    .card:hover {
-      transform: translateY(-4px) scale(1.02);
-      box-shadow: 0 8px 22px rgba(0,0,0,.12);
-    }
-    /* Quote bar */
-    .quote-bar {
-      margin-top: 10px;
-      padding: 8px 14px;
-      border-radius: 12px;
-      background: linear-gradient(90deg,#fef9c3,#f0fdf4);
-      animation: slideIn 0.6s ease;
-    }
-    /* Auto-scroll row */
-    .scroll-row {
-      display: flex;
-      gap: 16px;
-      overflow: hidden;
-      margin: 20px 0;
-      position: relative;
-    }
-    .scroll-inner {
-      display: flex;
-      gap: 16px;
-      animation: loopScroll 25s linear infinite;
-    }
-    .scroll-inner:hover { animation-play-state: paused; }
-    @keyframes loopScroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
-    }
-    /* Animations */
-    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-    @keyframes slideIn { from {transform:translateY(-10px);opacity:0;} to {transform:translateY(0);opacity:1;} }
+  /* =========================
+     THEME TOKENS
+  ========================== */
+  :root{
+    --bg-a:#f9fafc; --bg-b:#f3f5fb;
+    --card:#ffffff; --muted:#6b7280; --text:#0f172a;
+    --line:#e5e7eb; --chip:#f5f7fb;
+    --brand:#0ea5e9; --brand-2:#22c55e;
+    --shadow:0 8px 24px rgba(15,23,42,.08);
+
+    --radius:18px; --radius-lg:22px;
+    --gap:18px;
+
+    --fs-h1:clamp(1.6rem,4vw,2.4rem);
+    --fs-h2:clamp(1.05rem,2.3vw,1.25rem);
+    --fs-body:clamp(.95rem,2.5vw,1rem);
+    --fs-meta:clamp(.84rem,2.2vw,.92rem);
+
+    --ico:clamp(1.6rem,6vw,2.2rem);
+    --ico-xl:clamp(1.9rem,7.5vw,2.6rem);
+  }
+  :root[data-theme="dark"]{
+    --bg-a:#0f172a; --bg-b:#0b1220;
+    --card:#0b1220; --text:#e5e7eb; --muted:#a3adc2; --line:#1f2a44; --chip:#0f172a;
+    --shadow:0 16px 28px rgba(0,0,0,.45);
+  }
+
+  /* =========================
+     BASE LAYOUT
+  ========================== */
+  html,body{height:100%}
+  *,*:before,*:after{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,'Noto Color Emoji';
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 20% -10%,var(--bg-b),transparent),
+      radial-gradient(1200px 600px at 80% 110%,var(--bg-b),transparent),
+      linear-gradient(180deg,var(--bg-a),var(--bg-b));
+    animation:fadeIn .4s ease;
+  }
+  :root[data-theme="dark"] body { color-scheme: dark; }
+
+  /* Full-bleed wrapper; the .rail centers content */
+  .wrap{padding:16px 0 96px}
+  .rail{
+    width:100%;
+    max-width:1320px;              /* desktop container width */
+    margin-inline:auto;
+    padding-inline:16px;           /* site side padding */
+  }
+  /* Phones: tighter sides so cards fill the screen better */
+  @media (max-width:480px){ .rail{ padding-inline:12px; } }
+
+  /* =========================
+     HEADER
+  ========================== */
+  .brand{
+    display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;margin-bottom:6px
+  }
+  .brand .logo img{width:52px;height:52px;border-radius:14px;box-shadow:0 6px 18px rgba(1, 16, 65, 0.15)}
+  .brand h1{font-size:var(--fs-h1);margin:0 0 4px;font-weight:800;letter-spacing:-.015em;color: #07173a;}
+  .brand p{margin:0;color:var(--muted);font-size:var(--fs-meta)}
+
+  .sticky{
+    position:sticky;top:0;z-index:30;
+    backdrop-filter:saturate(1.1) blur(6px);
+    background:linear-gradient(to bottom,rgba(255,255,255,.86),rgba(255,255,255,.68));
+    border-bottom:1px solid var(--line);
+    padding-block:12px;
+  }
+  [data-theme="dark"] .sticky{
+    background:linear-gradient(to bottom,rgba(10,15,25,.75),rgba(10,15,25,.6));
+  }
+
+  .toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+
+  /* Search (icon perfectly right-aligned) */
+  .search{position:relative;display:flex;align-items:center}
+  .search input{
+    width:100%; height:48px;
+    border-radius:999px;border:1px solid var(--line);background:var(--card);
+    padding-inline:14px 48px; font-size:var(--fs-body);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .search .glass{
+    position:absolute; top:50%; transform:translateY(-50%);
+    right:14px !important; left:auto !important;
+    width:24px;height:24px;display:grid;place-items:center;pointer-events:none;opacity:.9;
+  }
+  .search .glass svg{width:20px;height:20px;display:block}
+
+  /* Pills */
+  .tabs{
+    display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    border:1px solid var(--line); background:var(--chip);
+    padding:10px 16px;border-radius:999px;cursor:pointer;font-size:.95rem;font-weight:600;
+    transition:background .15s ease, box-shadow .15s ease, transform .08s ease;
+    white-space:nowrap;
+  }
+  .tab.is-active{background:#1118270d; box-shadow:0 0 0 3px #1118270a inset}
+  [data-theme="dark"] .tab.is-active{background:#ffffff12; box-shadow:0 0 0 3px #ffffff10 inset}
+  .tab:active{transform:translateY(1px)}
+
+  .theme-btn{
+    border:1px solid var(--line);background:var(--card);padding:10px 12px;border-radius:12px;
+    cursor:pointer;font-size:1.1rem
+  }
+
+  /* Quote */
+  .quote-bar{
+    margin:12px 0 8px;padding:12px 14px;border-radius:14px;
+    background:linear-gradient(90deg,#fef9c3,#f0fdf4);
+    display:flex;align-items:center;justify-content:space-between;gap:10px
+  }
+  :root[data-theme="dark"] .quote-bar{background:linear-gradient(90deg,#334155,#0b1220)}
+  .quote{margin:0;font-size:var(--fs-meta)}
+  .quote-btn{border:1px dashed #eab308;background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+  :root[data-theme="dark"] .quote-btn{background:#111827;color:#fef3c7;border-color:#f59e0b}
+
+  /* =========================
+     FEATURED SCROLLER
+  ========================== */
+  .scroller{overflow:clip;position:relative;margin:8px 0 0}
+  .track{display:flex;gap:14px;width:max-content;padding:2px;animation:loop 22s linear infinite}
+  .track:hover{animation-play-state:paused}
+  @keyframes loop{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .scroller .card{min-width:260px}
+
+  /* =========================
+     CARDS
+  ========================== */
+  a.card{text-decoration:none;color:inherit}
+  .card{
+    display:flex;gap:14px;align-items:flex-start;
+    padding:16px;border-radius:20px;background:var(--card);border:1px solid var(--line);
+    box-shadow: var(--shadow);
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    height:100%;
+    overflow:hidden; position:relative;
+  }
+  .card::before,.card::after{content:none !important;display:none !important;}
+  .card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(15,23,42,.12);border-color:#dbe0e7}
+  [data-theme="dark"] .card:hover{border-color:#26304a}
+
+  .ico-wrap{
+    width:56px;height:56px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;
+    background:color-mix(in srgb,var(--brand) 16%, transparent); font-size:var(--ico-xl);
+  }
+  .ico-wrap.alt{background:color-mix(in srgb,var(--brand-2) 16%, transparent)}
+
+  .card h3{margin:0 0 6px;font-size:var(--fs-h2);line-height:1.25;font-weight:800;letter-spacing:-.01em}
+  .card p{margin:0;color:var(--muted);font-size:var(--fs-meta);line-height:1.45;max-width:34ch}
+
+  /* =========================
+     GRID — 1→2→3→4→5 columns
+     (single, conflict-free definition)
+  ========================== */
+  .grid{
+    display:grid;gap:var(--gap);margin:18px 0 80px;
+    grid-template-columns:1fr;align-items:stretch;
+    grid-auto-rows: 1fr;
+    width:100%;                /* <- fill the rail, no mysterious gaps */
+    max-width:none;            /* <- kill older max-width snippets */
+  }
+  @media (min-width:480px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (min-width:900px){ .grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media (min-width:1200px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  @media (min-width:1600px){ .grid{grid-template-columns:repeat(5,minmax(0,1fr))} }
+
+  /* Slightly shorter tool cards (mobile gets even shorter) */
+  .tool{min-height:168px;}
+  @media (max-width:480px){ .tool{min-height:156px;} }
+
+  /* =========================
+     BOTTOM DOCK (mobile)
+  ========================== */
+  .dock{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+    padding:8px 12px env(safe-area-inset-bottom);
+    background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.95));
+    border-top:1px solid var(--line);backdrop-filter:blur(10px) saturate(1.2)
+  }
+  :root[data-theme="dark"] .dock{background:linear-gradient(180deg,rgba(8,13,20,.6),rgba(8,13,20,.9))}
+  .dock a{display:grid;gap:6px;justify-items:center;text-decoration:none;color:inherit;font-size:.82rem}
+  .dock .bubble{font-size:var(--ico);width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+  @media (min-width:900px){.dock{display:none}}
+
+  /* =========================
+     FOOTER & MOTION
+  ========================== */
+  footer{color:var(--muted);font-size:var(--fs-meta);margin:18px 0 24px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,1px,1px);border:0}
+  @media (prefers-reduced-motion:reduce){body,.track{animation:none!important}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  /* --- FIX: text clipping in cards --------------------------------------- */
+.card{
+  display: flex;                 /* you already have this, just reaffirm */
+  overflow: visible;             /* was hidden; let wrapped text show cleanly */
+}
+
+.card > div:last-child{
+  flex: 1 1 auto;                /* take remaining space */
+  min-width: 0;                  /* CRITICAL: allow the text column to shrink */
+}
+
+/* better wrapping for long tokens like "Text/Markdown" */
+.card h3,
+.card p{
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  text-wrap: balance; 
+  color: #053c56;   
+  font-size: 1rem;        /* nicer line breaks where supported */
+}
+/* ===== Professional typography (iLovePDF-style) ===== */
+
+/* Font weights */
+:root{
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+}
+
+/* Global smoothing + font */
+html, body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Color Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0;
+  font-weight: var(--fw-regular);
+}
+
+/* Brand title: bold, not heavy; relaxed line-height & tracking */
+.brand h1{
+  font-weight: var(--fw-bold);        /* 700 instead of 800 */
+  letter-spacing: -0.01em;            /* slightly relaxed */
+  line-height: 1.15;
+}
+
+/* Card titles: semibold, calmer spacing & line-height */
+.card h3{
+  font-weight: var(--fw-semibold);    /* 600 */
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: auto;
+}
+
+/* Card text: regular, softer color and taller line-height */
+.card p{
+  font-weight: var(--fw-regular);     /* 400 */
+  line-height: 1.5;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+/* Category pills: medium (looks snappy without shouting) */
+.tab{
+  font-weight: var(--fw-medium);      /* 500 */
+}
+
+/* Search placeholder readability (optional) */
+.search input::placeholder{
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  opacity: .8;
+}
+
+/* Headings elsewhere (if any) */
+h1,h2,h3{
+  font-family: inherit;
+}
+
+/* Ensure emojis/icons sit well with Inter */
+.ico-wrap, .ico {
+  font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
   </style>
 </head>
 <body>
-  <!-- Header -->
-  <header class="site">
-    <div class="brand">
-      <div class="logo"><img src="assets/icon-512.png" alt="ND Logo"></div>
-      <div>
-        <h1>NiceDay PDF Jar</h1>
-        <p>Fast, private, and friendly PDF tools — right in your browser.</p>
+  <div class="wrap">
+    <div class="rail">
+      <!-- Brand -->
+      <header class="brand" role="banner">
+        <div class="logo"><img src="assets/icon-512.png" alt="NiceDay logo"></div>
+        <div>
+          <h1>NiceDay PDF Jar</h1>
+          <p>Fast, private, friendly PDF tools — right in your browser.</p>
+        </div>
+      </header>
+    </div>
+
+    <!-- Sticky controls -->
+    <div class="sticky" role="region" aria-label="Search and categories">
+      <div class="rail">
+        <div class="toolbar">
+          <div class="search">
+            <label class="sr-only" for="search">Search tools</label>
+            <input id="search" type="search" inputmode="search" placeholder="Search tools (e.g., merge, rotate, sign)…" />
+            <span class="glass" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+          </div>
+          <button id="themeToggle" class="theme-btn" aria-label="Toggle dark mode" title="Toggle theme">🌙</button>
+        </div>
+
+        <nav class="tabs" aria-label="Tool categories" role="tablist">
+          <button class="tab is-active" data-cat="all" role="tab" aria-selected="true">All</button>
+          <button class="tab" data-cat="docs" role="tab" aria-selected="false">Docs</button>
+          <button class="tab" data-cat="convert" role="tab" aria-selected="false">Convert</button>
+          <button class="tab" data-cat="organize" role="tab" aria-selected="false">Organize</button>
+          <button class="tab" data-cat="edit" role="tab" aria-selected="false">Edit</button>
+          <button class="tab" data-cat="secure" role="tab" aria-selected="false">PDF Security</button>
+        </nav>
+
+        <div class="quote-bar" role="status" aria-live="polite">
+          <p id="quote" class="quote">“Dream big. Start small. Move now.” · <em>NiceDay</em></p>
+          <button id="quoteNext" class="quote-btn" type="button" title="Show another">✨ New Quote</button>
+        </div>
       </div>
     </div>
 
-    <div class="quick">
-      <div class="search">
-        <label class="sr-only" for="search">Search tools</label>
-        <input id="search" type="search" inputmode="search" placeholder="Search tools (e.g., merge, rotate, sign)…" />
-        <span aria-hidden="true">🔎</span>
+    <!-- Featured -->
+    <section class="scroller" aria-label="Featured tools">
+      <div class="rail">
+        <div class="track" id="track">
+          <a class="card" href="tools/merge.html"><div class="ico-wrap">➕</div><div><h3>Merge PDFs</h3><p>Combine multiple PDFs into a single file.</p></div></a>
+          <a class="card" href="tools/split.html"><div class="ico-wrap alt">✂️</div><div><h3>Split PDF</h3><p>Separate by page ranges like 1–3,5 into new files.</p></div></a>
+          <a class="card" href="tools/numbers.html"><div class="ico-wrap">🔢</div><div><h3>Add Numbers</h3><p>Add page numbers in footer or header positions.</p></div></a>
+          <a class="card" href="tools/watermark.html"><div class="ico-wrap alt">💧</div><div><h3>Watermark</h3><p>Apply diagonal or text watermarks to your pages.</p></div></a>
+          <a class="card" href="tools/delete.html"><div class="ico-wrap">🧹</div><div><h3>Delete Pages</h3><p>Remove unwanted pages from your document.</p></div></a>
+        </div>
       </div>
+    </section>
 
-      <nav class="tabs" aria-label="Tool categories">
-        <button class="tab is-active" data-cat="all" aria-pressed="true">All</button>
-        <button class="tab" data-cat="docs">Docs</button>
-        <button class="tab" data-cat="convert">Convert</button>
-        <button class="tab" data-cat="organize">Organize</button>
-        <button class="tab" data-cat="edit">Edit</button>
-        <button class="tab" data-cat="secure">Secure</button>
-      </nav>
+    <!-- All tools grid -->
+    <div class="rail">
+      <main class="grid" id="toolGrid" aria-live="polite">
+        <!-- Docs -->
+        <a class="card tool" data-cat="docs" href="tools/write.html"><div class="ico-wrap alt">📝</div><div><h3>Write a Note → PDF</h3><p>Type notes and export a clean A4 PDF.</p></div></a>
+        <a class="card tool" data-cat="docs" href="tools/txt2pdf.html"><div class="ico-wrap">📄</div><div><h3>Text/Markdown → PDF</h3><p>Upload .txt or .md and convert instantly.</p></div></a>
 
-      <button id="themeToggle" class="theme-btn" aria-label="Toggle dark mode">🌙</button>
+        <!-- Convert -->
+        <a class="card tool" data-cat="convert" href="tools/scan.html"><div class="ico-wrap">📷</div><div><h3>Scan to PDF (Camera)</h3><p>Capture pages using your device camera.</p></div></a>
+        <a class="card tool" data-cat="convert" href="tools/images-to-pdf.html"><div class="ico-wrap alt">🖼️</div><div><h3>Images → PDF</h3><p>Combine images into a single PDF.</p></div></a>
+        <a class="card tool" data-cat="convert" href="tools/pdf-to-images.html"><div class="ico-wrap">🔁</div><div><h3>PDF → Images (ZIP)</h3><p>Export pages as PNG/JPG, zipped together.</p></div></a>
+        <a class="card tool" data-cat="convert" href="tools/compress.html"><div class="ico-wrap alt">🪄</div><div><h3>Compress PDF</h3><p>Shrink file size while keeping good quality.</p></div></a>
+
+        <!-- Organize -->
+        <a class="card tool" data-cat="organize" href="tools/merge.html"><div class="ico-wrap">➕</div><div><h3>Merge PDFs</h3><p>Easily combine multiple PDFs into one.</p></div></a>
+        <a class="card tool" data-cat="organize" href="tools/split.html"><div class="ico-wrap alt">✂️</div><div><h3>Split PDF</h3><p>Split a PDF by page ranges in seconds.</p></div></a>
+        <a class="card tool" data-cat="organize" href="tools/insert-blank.html"><div class="ico-wrap">🧾</div><div><h3>Insert Blank Pages</h3><p>Add blanks at specific positions.</p></div></a>
+        <a class="card tool" data-cat="organize" href="tools/reorder.html"><div class="ico-wrap alt">📑</div><div><h3>Reorder Pages (DnD)</h3><p>Drag thumbnails to set a new order.</p></div></a>
+        <a class="card tool" data-cat="organize" href="tools/duplicate.html"><div class="ico-wrap">📚</div><div><h3>Duplicate Pages</h3><p>Append extra copies.</p></div></a>
+
+        <!-- Edit -->
+        <a class="card tool" data-cat="edit" href="tools/rotate.html"><div class="ico-wrap alt">🔄</div><div><h3>Rotate Pages</h3><p>Rotate pages by 90/180/270°.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/delete.html"><div class="ico-wrap">🧹</div><div><h3>Delete Pages</h3><p>Remove selected pages.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/extract.html"><div class="ico-wrap alt">📤</div><div><h3>Extract Pages</h3><p>Keep only the pages you need.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/numbers.html"><div class="ico-wrap">🔢</div><div><h3>Add Page Numbers</h3><p>Footer or header positions.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/watermark.html"><div class="ico-wrap alt">💧</div><div><h3>Add Watermark</h3><p>Mark pages with text or a logo.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/crop.html"><div class="ico-wrap">✂️</div><div><h3>Crop Margins</h3><p>Trim all pages by a set margin.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/stamp.html"><div class="ico-wrap alt">🏷️</div><div><h3>Text Stamp</h3><p>Add a small label on each page.</p></div></a>
+        <a class="card tool" data-cat="edit" href="tools/sign.html"><div class="ico-wrap">✍️</div><div><h3>PNG Signature</h3><p>Place your saved signature image.</p></div></a>
+
+        <!-- Secure -->
+        <a class="card tool" data-cat="secure" href="tools/metadata.html"><div class="ico-wrap alt">🧼</div><div><h3>Strip Metadata</h3><p>Create a clean copy that removes metadata.</p></div></a>
+        <a class="card tool" data-cat="secure" href="tools/redact.html"><div class="ico-wrap">🕶️</div><div><h3>Redact (Draw Boxes)</h3><p>Hide sensitive content with black boxes.</p></div></a>
+      </main>
+
+      <footer>© <span id="yr"></span> Nice Day · <a href="#">Privacy</a> · <a href="#">Terms</a></footer>
     </div>
+  </div>
 
-    <div class="quote-bar">
-      <div id="quote" class="quote" aria-live="polite">Loading a little sunshine…</div>
-      <button id="quoteNext" class="quote-btn" type="button" title="Show another">✨ New Quote</button>
-    </div>
-  </header>
+  <!-- Bottom Dock -->
+  <nav class="dock" aria-label="Quick actions">
+    <a href="tools/merge.html"><div class="bubble">➕</div><span>Merge</span></a>
+    <a href="tools/split.html"><div class="bubble">✂️</div><span>Split</span></a>
+    <a href="tools/images-to-pdf.html"><div class="bubble">🖼️</div><span>Images→PDF</span></a>
+    <a href="tools/numbers.html"><div class="bubble">🔢</div><span>Numbers</span></a>
+  </nav>
 
-  <!-- Auto-scrolling featured tools -->
-  <section class="scroll-row">
-    <div class="scroll-inner">
-      <a class="card" href="tools/delete.html"><h3>🧹 Delete Pages</h3><p>Remove unwanted pages</p></a>
-      <a class="card" href="tools/numbers.html"><h3>🔢 Add Numbers</h3><p>Footer/header positions</p></a>
-      <a class="card" href="tools/watermark.html"><h3>💧 Watermark</h3><p>Brand or mark pages</p></a>
-      <a class="card" href="tools/merge.html"><h3>➕ Merge PDFs</h3><p>Combine files</p></a>
-      <!-- repeat so loop looks seamless -->
-      <a class="card" href="tools/delete.html"><h3>🧹 Delete Pages</h3><p>Remove unwanted pages</p></a>
-      <a class="card" href="tools/numbers.html"><h3>🔢 Add Numbers</h3><p>Footer/header positions</p></a>
-    </div>
-  </section>
-
-  <!-- Main grid -->
-  <main class="grid" id="toolGrid" aria-live="polite">
-    <!-- Docs -->
-    <a class="card" data-cat="docs" data-tags="write note text pdf" href="tools/write.html">
-      <h3>📝 Write a Note → PDF</h3><p>Type → neatly paged A4 PDF</p>
-    </a>
-    <a class="card" data-cat="docs" data-tags="text markdown md pdf" href="tools/txt2pdf.html">
-      <h3>📄 Text/Markdown → PDF</h3><p>Upload .txt/.md → combined PDF</p>
-    </a>
-
-    <!-- Convert -->
-    <a class="card" data-cat="convert" data-tags="scan camera pdf" href="tools/scan.html">
-      <h3>📷 Scan to PDF (Camera)</h3><p>Capture pages via camera</p>
-    </a>
-    <a class="card" data-cat="convert" data-tags="images jpg png to pdf" href="tools/images-to-pdf.html">
-      <h3>🖼️ Images → PDF</h3><p>Combine images into a single PDF</p>
-    </a>
-    <a class="card" data-cat="convert" data-tags="pdf to images export png jpg zip" href="tools/pdf-to-images.html">
-      <h3>🔁 PDF → Images (ZIP)</h3><p>Export pages as PNG/JPG</p>
-    </a>
-    <a class="card" data-cat="convert" data-tags="compress shrink reduce size" href="tools/compress.html">
-      <h3>🪄 Compress PDF</h3><p>Rasterize pages to reduce size</p>
-    </a>
-
-    <!-- Organize -->
-    <a class="card" data-cat="organize" data-tags="merge combine join" href="tools/merge.html">
-      <h3>➕ Merge PDFs</h3><p>Multiple PDFs → one</p>
-    </a>
-    <a class="card" data-cat="organize" data-tags="split ranges extract groups zip" href="tools/split.html">
-      <h3>✂️ Split PDF</h3><p>Ranges like 1-3,5 → parts</p>
-    </a>
-    <a class="card" data-cat="organize" data-tags="insert blank pages" href="tools/insert-blank.html">
-      <h3>🧾 Insert Blank Pages</h3><p>Add blank A4 at positions</p>
-    </a>
-    <a class="card" data-cat="organize" data-tags="reorder drag sort dnd" href="tools/reorder.html">
-      <h3>📑 Reorder Pages (DnD)</h3><p>Drag thumbnails → new order</p>
-    </a>
-    <a class="card" data-cat="organize" data-tags="duplicate copy pages" href="tools/duplicate.html">
-      <h3>📚 Duplicate Pages</h3><p>Append copies of ranges</p>
-    </a>
-
-    <!-- Edit -->
-    <a class="card" data-cat="edit" data-tags="rotate orientation 90 180 270" href="tools/rotate.html">
-      <h3>🔄 Rotate Pages</h3><p>90/180/270 by ranges</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="delete remove pages" href="tools/delete.html">
-      <h3>🧹 Delete Pages</h3><p>Remove selected pages</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="extract keep pages" href="tools/extract.html">
-      <h3>📤 Extract Pages</h3><p>Keep only listed pages</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="numbers footer header paginate" href="tools/numbers.html">
-      <h3>🔢 Add Page Numbers</h3><p>Footer/header positions</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="watermark draft confidential" href="tools/watermark.html">
-      <h3>💧 Add Watermark</h3><p>Diagonal/text watermark</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="crop margins trim" href="tools/crop.html">
-      <h3>✂️ Crop Margins</h3><p>Trim all pages by pts</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="stamp label text" href="tools/stamp.html">
-      <h3>🏷️ Text Stamp</h3><p>Small label on every page</p>
-    </a>
-    <a class="card" data-cat="edit" data-tags="sign signature png jpg" href="tools/sign.html">
-      <h3>✍️ PNG Signature</h3><p>Place signature image</p>
-    </a>
-
-    <!-- Secure -->
-    <a class="card" data-cat="secure" data-tags="metadata info strip clean" href="tools/metadata.html">
-      <h3>🧼 Strip Metadata</h3><p>Create a clean copy</p>
-    </a>
-    <a class="card" data-cat="secure" data-tags="redact hide black box" href="tools/redact.html">
-      <h3>🕶️ Redact (Draw Boxes)</h3><p>Black boxes, then apply</p>
-    </a>
-  </main>
-
-  <footer class="sitef">
-    © <span id="yr"></span> Nice Day · <a href="#">Privacy</a> · <a href="#">Terms</a>
-  </footer>
-
-  <!-- Keep your animation/interactions -->
+  <!-- Scripts -->
   <script src="assets/theme.js"></script>
   <script src="assets/filter.js"></script>
   <script src="assets/quotes.js"></script>
@@ -195,22 +431,69 @@
   <script src="assets/card-details.js"></script>
 
   <script>
-    // Year stamp
+    // Year
     document.getElementById('yr').textContent = new Date().getFullYear();
 
-    // Build seamless loop in the quick tools strip by cloning nodes
-    (function(){
-      const tracks = document.querySelectorAll('.strip-track');
-      if(tracks.length < 2) return;
-      const [t1, t2] = tracks;
-      t2.innerHTML = t1.innerHTML; // mirror for endless scroll
+    // Featured loop
+    (function () {
+      const t = document.getElementById('track');
+      if (!t) return;
+      t.innerHTML += t.innerHTML;
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const apply = () => { t.style.animationPlayState = mq.matches ? 'paused' : 'running'; };
+      mq.addEventListener?.('change', apply); apply();
+    })();
 
-      // Respect user motion preferences
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReduced) {
-        t1.style.animationPlayState = 'paused';
-        t2.style.animationPlayState = 'paused';
-      }
+    // Tabs filter
+    (function () {
+      const tabs = Array.from(document.querySelectorAll('.tabs .tab'));
+      const cards = Array.from(document.querySelectorAll('#toolGrid .card.tool'));
+      const applyFilter = (cat) => {
+        cards.forEach(c => c.style.display = (cat === 'all' || c.dataset.cat === cat) ? 'flex' : 'none');
+      };
+      tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabs.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected','false'); });
+          btn.classList.add('is-active'); btn.setAttribute('aria-selected','true');
+          applyFilter(btn.dataset.cat);
+        }, { passive: true });
+      });
+    })();
+
+    // Search filter
+    (function () {
+      const input = document.getElementById('search');
+      const items = Array.from(document.querySelectorAll('#toolGrid .card.tool'));
+      if (!input) return;
+      const norm = s => (s||'').toLowerCase().normalize('NFKD');
+      input.addEventListener('input', () => {
+        const q = norm(input.value);
+        items.forEach(el => {
+          const text = norm(el.textContent + ' ' + (el.dataset.tags || ''));
+          el.style.display = text.includes(q) ? 'flex' : 'none';
+        });
+      }, { passive: true });
+    })();
+
+    // Theme toggle
+    (function () {
+      const btn = document.getElementById('themeToggle');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const root = document.documentElement;
+        const now = root.getAttribute('data-theme') || 'light';
+        const next = now === 'light' ? 'dark' : 'light';
+        root.setAttribute('data-theme', next);
+        btn.textContent = next === 'dark' ? '☀️' : '🌙';
+        try { localStorage.setItem('nd-theme', next); } catch {}
+      });
+      try {
+        const saved = localStorage.getItem('nd-theme');
+        if (saved) {
+          document.documentElement.setAttribute('data-theme', saved);
+          document.getElementById('themeToggle').textContent = saved === 'dark' ? '☀️' : '🌙';
+        }
+      } catch {}
     })();
   </script>
 </body>
