@@ -1,25 +1,128 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>✂️ Split PDF • NiceDay PDF Jar</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* ===== Theme ===== */
+    :root[data-theme="light"]{
+      --bg:#f7f8fb; --card:#ffffff; --ink:#0f172a; --muted:#667085;
+      --border:#e6eaf0; --brand:#2563eb; --brand-2:#60a5fa;
+      --ring:0 0 0 4px rgba(37,99,235,.14);
+      --shadow:0 10px 26px rgba(2,6,23,.06);
+      --chip-bg: color-mix(in oklab, var(--card), #000 2%);
+    }
+    :root[data-theme="dark"]{
+      --bg:#0c1020; --card:#0f1428; --ink:#e7e9f2; --muted:#a1a8c5;
+      --border:#1d274a; --brand:#7aa2ff; --brand-2:#a9c2ff;
+      --ring:0 0 0 4px rgba(122,162,255,.18);
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --chip-bg:#0b1020;
+    }
+
+    /* ===== Base ===== */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font:15px/1.5 "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial}
+    .wrap{max-width:960px;margin:22px auto 40px;padding:0 16px}
+
+    /* Header */
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-left{display:flex;align-items:center;gap:12px}
+    .logo{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 6px 16px rgba(37,99,235,.25)}
+    .title h1{margin:0;font-size:20px}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:13px}
+    .themeBtn{border:1px solid var(--border);background:var(--card);color:var(--ink);
+      padding:.4rem .75rem;border-radius:999px;cursor:pointer;font-size:.9rem}
+
+    /* Card */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px}
+
+    /* Drop zone */
+    .dz{display:flex;align-items:center;gap:12px;padding:14px;border:2px dashed var(--border);
+      border-radius:14px;background:var(--chip-bg);cursor:pointer;transition:border-color .15s}
+    .dz:hover{border-color:color-mix(in oklab, var(--brand) 55%, #fff)}
+    .dz:focus-visible{outline:none; box-shadow:var(--ring)}
+    .dz .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+    .dz strong{display:block}
+    input[type="file"]{display:none}
+    .badge{margin-left:auto;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);background:var(--chip-bg);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* Inputs */
+    .grid{display:grid;gap:10px;margin-top:12px}
+    .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media (max-width:680px){ .two{grid-template-columns:1fr} }
+    label{display:flex;flex-direction:column;gap:.35rem}
+    .input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:var(--card);color:var(--ink)}
+    .input:focus{outline:none; box-shadow:var(--ring); border-color:var(--brand)}
+
+    /* Chips */
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{border:1px solid var(--border); background:var(--card); color:var(--ink);
+      padding:8px 12px;border-radius:999px;font-weight:700;cursor:pointer;font-size:.85rem}
+    .chip:hover{filter:brightness(1.03)}
+
+    /* CTA */
+    .cta{margin-top:12px;width:100%;padding:12px 14px;border:0;border-radius:12px;color:#fff;font-weight:800;
+      background:linear-gradient(90deg, var(--brand), color-mix(in oklab, var(--brand) 75%, #fff));
+      box-shadow:0 8px 18px rgba(37,99,235,.25);cursor:pointer}
+    .cta:hover{filter:brightness(1.03)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+  </style>
 </head>
 <body>
-  <main class="tool-wrap">
-    <h1>✂️ Split PDF</h1>
-    <p>Enter page ranges like <code>1-3,5,9-10</code>. Each range becomes a separate PDF.</p>
+  <main class="wrap">
+    <!-- Header -->
+    <div class="hero">
+      <div class="hero-left">
+        <div class="logo">ND</div>
+        <div class="title">
+          <h1>✂️ Split PDF</h1>
+          <p class="subtitle">Enter ranges like <code>1-3,5,9-10</code>. Each range becomes a separate PDF.</p>
+        </div>
+      </div>
+      <button id="themeBtn" class="themeBtn" type="button">🌙 Dark</button>
+    </div>
 
-    <div class="tool-card">
+    <!-- Tool -->
+    <section class="card">
+      <label for="file" class="dz" id="dz" tabindex="0" aria-label="Drop your PDF here, or click to choose">
+        <div class="ic">📄</div>
+        <div><strong>Drop your PDF here, or click to choose</strong>
+          <div class="subtitle">Single PDF • We’ll show the page count after loading</div>
+        </div>
+        <div id="badge" class="badge" hidden></div>
+      </label>
       <input id="file" type="file" accept="application/pdf" />
 
-      <label style="margin-top:.5rem; display:block;">
+      <label style="display:block;margin-top:12px;">
         Ranges
-        <input id="ranges" class="input" placeholder="1-3,5,9-10" />
+        <input id="ranges" class="input" placeholder="e.g. 1-3,5,9-10" />
       </label>
 
-      <div class="grid two" style="margin-top:.5rem">
+      <div class="chips" role="group" aria-label="Quick ranges">
+        <button class="chip" id="chipEach">Each page</button>
+        <button class="chip" id="chipOdd">Odd pages</button>
+        <button class="chip" id="chipEven">Even pages</button>
+        <button class="chip" id="chipFirstHalf">First half</button>
+        <button class="chip" id="chipSecondHalf">Second half</button>
+        <button class="chip" id="chipClear">Clear</button>
+      </div>
+
+      <div class="grid two" style="margin-top:10px">
         <label>
           Base filename
           <input id="base" class="input" placeholder="part" value="part" />
@@ -30,16 +133,171 @@
         </label>
       </div>
 
-      <button id="go" style="margin-top:.75rem">Split & Download (ZIP)</button>
-      <p id="status" class="status"></p>
-      <p class="hint">Tip: Page numbers start at 1. Example creates files like <code>part-01.pdf</code>, <code>part-02.pdf</code>, …</p>
-    </div>
+      <button id="go" class="cta">Split &amp; Download (ZIP)</button>
+      <p id="status" class="status" aria-live="polite">Choose a PDF to start.</p>
+      <p class="hint">Tip: Page numbers start at <b>1</b>. Example creates files like <code>part-01.pdf</code>, <code>part-02.pdf</code>, …</p>
+    </section>
   </main>
 
-  <!-- pdf-lib + JSZip -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="split.js"></script>
   <script src="../assets/celebrate.js"></script>
+  <script>
+    /* ===== Theme ===== */
+    const root=document.documentElement, themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme',mode); themeBtn.textContent = mode==='dark'?'☀️ Light':'🌙 Dark'; localStorage.setItem('nd-theme',mode); }
+    setTheme(localStorage.getItem('nd-theme')||'light');
+    themeBtn.addEventListener('click', ()=> setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+    /* ===== Elements ===== */
+    const fileEl = document.getElementById('file');
+    const dz = document.getElementById('dz');
+    const badge = document.getElementById('badge');
+    const rangesEl = document.getElementById('ranges');
+    const baseEl = document.getElementById('base');
+    const padEl = document.getElementById('pad');
+    const statusEl = document.getElementById('status');
+    const goBtn = document.getElementById('go');
+
+    let pdfBytes = null; // Uint8Array (we only use pdf-lib, so no detach issues)
+    let pageCount = 0;
+
+    function setBadge(name, size){
+      if(!name){ badge.hidden=true; return; }
+      const kb=Math.max(1,Math.round(size/1024)); badge.textContent = `${name} • ${kb} KB`; badge.hidden=false;
+    }
+
+    // Drop zone behaviors
+    dz.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileEl.click(); }});
+    ['dragenter','dragover'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='color-mix(in oklab, var(--brand) 55%, #fff)';}));
+    ['dragleave','drop'].forEach(evt=> dz.addEventListener(evt, e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='var(--border)';}));
+    dz.addEventListener('drop', e=>{
+      const f=e.dataTransfer?.files?.[0]; if(f && f.type==='application/pdf'){ fileEl.files=e.dataTransfer.files; fileEl.dispatchEvent(new Event('change')); }
+    });
+
+    // Load PDF
+    fileEl.addEventListener('change', async e=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      setBadge(f.name, f.size);
+      statusEl.textContent='Reading PDF…';
+      try{
+        const ab = await f.arrayBuffer();
+        pdfBytes = new Uint8Array(ab);
+        const doc = await PDFLib.PDFDocument.load(pdfBytes);
+        pageCount = doc.getPageCount();
+        statusEl.textContent=`PDF loaded: ${pageCount} page(s). Enter ranges or use quick buttons.`;
+      }catch(err){
+        console.error(err);
+        pdfBytes = null; pageCount = 0;
+        statusEl.textContent='Failed to read PDF.';
+      }
+    });
+
+    /* ===== Range helpers ===== */
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function parseRanges(str, max){
+      if(!str) return [];
+      const out = [];
+      const parts = str.split(',').map(s=>s.trim()).filter(Boolean);
+      for(const p of parts){
+        if(p.includes('-')){
+          let [a,b] = p.split('-').map(x=>Number(x.trim()));
+          if(Number.isFinite(a) && Number.isFinite(b)){
+            a = clamp(a,1,max); b = clamp(b,1,max);
+            if (b < a) [a,b] = [b,a];
+            for(let i=a;i<=b;i++) out.push(i);
+          }
+        }else{
+          const n = Number(p);
+          if(Number.isFinite(n)) out.push(clamp(n,1,max));
+        }
+      }
+      // unique + sorted
+      return [...new Set(out)].sort((x,y)=>x-y);
+    }
+
+    /* ===== Quick chips ===== */
+    function needPdf(){ if(!pdfBytes){ statusEl.textContent='Load a PDF first.'; return false; } return true; }
+
+    document.getElementById('chipEach').onclick = ()=>{
+      if(!needPdf()) return;
+      // each page -> produce ranges like "1,2,3,..." but we can leave blank and handle as each page later.
+      rangesEl.value = Array.from({length:pageCount},(_,i)=> String(i+1)).join(',');
+    };
+    document.getElementById('chipOdd').onclick = ()=>{
+      if(!needPdf()) return;
+      rangesEl.value = Array.from({length:pageCount},(_,i)=>i+1).filter(n=>n%2===1).join(',');
+    };
+    document.getElementById('chipEven').onclick = ()=>{
+      if(!needPdf()) return;
+      rangesEl.value = Array.from({length:pageCount},(_,i)=>i+1).filter(n=>n%2===0).join(',');
+    };
+    document.getElementById('chipFirstHalf').onclick = ()=>{
+      if(!needPdf()) return;
+      const end = Math.floor(pageCount/2);
+      rangesEl.value = end>=1 ? `1-${end}` : '1';
+    };
+    document.getElementById('chipSecondHalf').onclick = ()=>{
+      if(!needPdf()) return;
+      const start = Math.floor(pageCount/2)+1;
+      rangesEl.value = `${start}-${pageCount}`;
+    };
+    document.getElementById('chipClear').onclick = ()=>{ rangesEl.value=''; };
+
+    /* ===== Split & ZIP ===== */
+    goBtn.addEventListener('click', async ()=>{
+      if(!needPdf()) return;
+
+      const base = (baseEl.value || 'part').trim();
+      const pad = clamp(Number(padEl.value)||2, 1, 4);
+
+      // Build groups of pages from ranges
+      const selected = parseRanges(rangesEl.value, pageCount);
+      if(selected.length === 0){
+        statusEl.textContent='No valid pages listed. Example: 1-3,5,9-10';
+        return;
+      }
+
+      // Convert the flat list into contiguous ranges (e.g., 1,2,3,5,7,8 -> [1-3],[5-5],[7-8])
+      const groups = [];
+      let start = selected[0], prev = selected[0];
+      for(let i=1;i<selected.length;i++){
+        const n = selected[i];
+        if(n === prev+1){ prev = n; continue; }
+        groups.push([start, prev]);
+        start = prev = n;
+      }
+      groups.push([start, prev]);
+
+      statusEl.textContent=`Splitting into ${groups.length} file(s)…`;
+      goBtn.disabled = true;
+
+      try{
+        const src = await PDFLib.PDFDocument.load(pdfBytes);
+        const zip = new JSZip();
+
+        for(let i=0;i<groups.length;i++){
+          const [a,b] = groups[i]; // 1-based inclusive
+          const out = await PDFLib.PDFDocument.create();
+          const idxs = Array.from({length:b-a+1},(_,k)=> (a-1)+k); // 0-based
+          const copied = await out.copyPages(src, idxs);
+          copied.forEach(p=> out.addPage(p));
+          const bytes = await out.save();
+          const num = String(i+1).padStart(pad,'0');
+          const name = `${base}-${num}.pdf`;
+          zip.file(name, bytes);
+        }
+
+        const blob = await zip.generateAsync({type:'blob'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=`${base}-parts.zip`; a.click();
+        statusEl.textContent=`Done. Exported ${groups.length} file(s) to ZIP.`;
+        window.showCelebration?.(url);
+      }catch(err){
+        console.error(err);
+        statusEl.textContent='Failed to split PDF.';
+      }finally{
+        goBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
