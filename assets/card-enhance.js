@@ -1,34 +1,31 @@
 // assets/card-enhance.js
-// Pull leading emoji from <h3> into a badge (data-emoji), add category label chip.
+// Minimal, no-badge version:
+// - Removes any previously injected badge/label elements
+// - Clears data-emoji / data-catlabel so CSS ::before/::after won't render chips
+// - Optionally strips a leading emoji from <h3> (keeps text clean)
+// - Does NOT add any new DOM nodes
 
 (() => {
   const cards = Array.from(document.querySelectorAll('.card'));
-  const catLabel = {
-    docs: 'Docs',
-    convert: 'Convert',
-    organize: 'Organize',
-    edit: 'Edit',
-    secure: 'Secure'
-  };
+  if (!cards.length) return;
+
+  // Leading emoji regex (covers most emoji incl. ZWJ/variation selectors)
   const emojiRE = /^\s*([\p{Emoji_Presentation}\p{Emoji}\uFE0F\u200D]{1,3})\s*/u;
 
   cards.forEach(card => {
+    // 1) Remove any legacy badge DOM nodes
+    card.querySelectorAll('.badge, .label, .tag, .tool-tag, .chip, .card-badge').forEach(el => el.remove());
+
+    // 2) Clear data attributes used by CSS pseudo-elements
+    if (card.hasAttribute('data-emoji')) card.removeAttribute('data-emoji');
+    if (card.hasAttribute('data-catlabel')) card.removeAttribute('data-catlabel');
+
+    // 3) Strip any leading emoji from the <h3> text (optional cleanup)
     const h3 = card.querySelector('h3');
-    if (!h3) return;
-
-    // If author already set data-emoji, keep it. Otherwise extract from h3.
-    if (!card.dataset.emoji) {
-      const m = h3.textContent.match(emojiRE);
-      if (m) {
-        card.dataset.emoji = m[1];
-        h3.textContent = h3.textContent.replace(emojiRE, ''); // drop emoji from title
-      }
-    }
-
-    // Footer chip text from data-cat
-    if (!card.dataset.catlabel) {
-      const key = card.dataset.cat || 'Tools';
-      card.dataset.catlabel = catLabel[key] || 'Tools';
+    if (h3 && h3.firstChild && typeof h3.textContent === 'string') {
+      const txt = h3.textContent;
+      const m = txt.match(emojiRE);
+      if (m) h3.textContent = txt.replace(emojiRE, '').trimStart();
     }
   });
 })();
