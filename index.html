@@ -10,17 +10,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 
-  <!-- Paint with the correct theme before first render -->
   <script>
-    (function () {
-      const root = document.documentElement, KEY = 'nd-theme';
-      try {
-        const saved = localStorage.getItem(KEY);
-        const initial = saved || (matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        root.setAttribute('data-theme', initial);
-      } catch { root.setAttribute('data-theme', 'light'); }
-    })();
-  </script>
+(() => {
+  const KEY = 'nd-theme';
+  const root = document.documentElement;
+
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch {}
+
+  const prefersDark = window.matchMedia &&
+                      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  const initial = (saved === 'light' || saved === 'dark')
+    ? saved
+    : (prefersDark ? 'dark' : 'light');
+
+  root.setAttribute('data-theme', initial);
+  root.dataset.themeKey = KEY; // expose key for the toggle later
+})();
+</script>
+
 
   <style>
   /* =========================
@@ -245,7 +254,7 @@
   hyphens: auto;
   text-wrap: balance; 
   color: #053c56;   
-  font-size: 1rem;        /* nicer line breaks where supported */
+  font-size: .7rem;        /* nicer line breaks where supported */
 }
 /* ===== Professional typography (iLovePDF-style) ===== */
 
@@ -282,6 +291,7 @@ html, body {
   overflow-wrap: normal;
   word-break: keep-all;
   hyphens: auto;
+  font-size: .5;
 }
 
 /* Card text: regular, softer color and taller line-height */
@@ -312,6 +322,82 @@ h1,h2,h3{
 .ico-wrap, .ico {
   font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
+
+/* ---- Cards: switch to CSS Grid (more robust than flex on some Android builds) ---- */
+.card{
+  display: grid;
+  grid-template-columns: 56px 1fr;   /* icon | text */
+  align-items: start;
+  gap: 14px;
+
+  padding:16px;
+  border-radius:20px;
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  height:auto;
+  overflow:hidden;                   /* keep rounded corners crisp */
+}
+.card:hover{ transform:translateY(-4px); box-shadow:0 10px 28px rgba(15,23,42,.12); border-color:#dbe0e7 }
+[data-theme="dark"] .card:hover{ border-color:#26304a }
+
+/* Allow the text column to actually shrink (critical on some phones) */
+.card > div:last-child{
+  min-width:0;
+}
+
+/* ---- Professional, calmer typography ---- */
+html, body{
+  font-family:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Color Emoji";
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  font-weight:400;
+}
+.brand h1{
+  font-weight:700;          /* not shouting */
+  letter-spacing:-0.01em;
+  line-height:1.15;
+  margin:0 0 4px;
+  color: #17191c;
+}
+
+/* Titles */
+.card h3{
+  margin:0 0 6px;
+  font-weight:600;          /* semibold, like iLovePDF */
+  font-size:1.2rem;
+  line-height:1.25;
+  letter-spacing:-.005em;
+  color:#092f48;
+  overflow-wrap:anywhere;   /* safe wrapping */
+  word-break:normal;        /* <- IMPORTANT: no keep-all */
+  hyphens:auto;
+  text-wrap:balance;        /* supported browsers will balance lines */
+}
+
+/* Descriptions */
+.card p{
+  margin:0;
+  font-weight:400;
+  font-size:.8rem;
+  line-height:1.5;
+  color:var(--muted);
+  overflow-wrap:anywhere;
+  word-break:normal;
+  hyphens:auto;
+}
+
+/* Icon bubble stays the same size */
+.ico-wrap{ width:56px; height:56px; border-radius:14px; display:grid; place-items:center; font-size:var(--ico-xl) }
+
+/* Pills: keep medium weight for a crisp look */
+.tab{ font-weight:500 }
+
+/* Ensure the grid fills the rail on all sizes (no mysterious left gap) */
+.grid{ width:100%; max-width:none }
+
 
   </style>
 </head>
@@ -423,7 +509,7 @@ h1,h2,h3{
   </nav>
 
   <!-- Scripts -->
-  <script src="assets/theme.js"></script>
+  
   <script src="assets/filter.js"></script>
   <script src="assets/quotes.js"></script>
   <script src="assets/fun.js"></script>
@@ -475,26 +561,46 @@ h1,h2,h3{
       }, { passive: true });
     })();
 
-    // Theme toggle
-    (function () {
-      const btn = document.getElementById('themeToggle');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        const root = document.documentElement;
-        const now = root.getAttribute('data-theme') || 'light';
-        const next = now === 'light' ? 'dark' : 'light';
-        root.setAttribute('data-theme', next);
-        btn.textContent = next === 'dark' ? '☀️' : '🌙';
-        try { localStorage.setItem('nd-theme', next); } catch {}
-      });
-      try {
-        const saved = localStorage.getItem('nd-theme');
-        if (saved) {
-          document.documentElement.setAttribute('data-theme', saved);
-          document.getElementById('themeToggle').textContent = saved === 'dark' ? '☀️' : '🌙';
-        }
-      } catch {}
-    })();
+  
+(() => {
+  const root = document.documentElement;
+  const KEY  = root.dataset.themeKey || 'nd-theme';
+  const btn  = document.getElementById('themeToggle');
+
+  const syncIcon = () => {
+    const t = root.getAttribute('data-theme') || 'light';
+    if (btn) {
+      btn.textContent = t === 'dark' ? '☀️' : '🌙';
+      btn.title = t === 'dark' ? 'Switch to light' : 'Switch to dark';
+      btn.setAttribute('aria-pressed', String(t === 'dark'));
+    }
+  };
+
+  // apply saved choice again (in case something changed after head)
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch {}
+  if (saved) root.setAttribute('data-theme', saved);
+  syncIcon();
+
+  btn?.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem(KEY, next); } catch {}
+    syncIcon();
+  }, { passive: true });
+
+  // Follow OS if the user hasn't chosen yet
+  if (!saved && window.matchMedia) {
+    const mq = matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener?.('change', e => {
+      root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      syncIcon();
+    });
+  }
+})();
+
+
   </script>
 </body>
 </html>
