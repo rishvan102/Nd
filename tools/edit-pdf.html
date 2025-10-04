@@ -159,12 +159,10 @@
 
   <script>
   // ======= Server toggle (Render) =======
-  // Set this to your Render URL to enable server export:
-  // e.g. "https://niceday-pdf-api.onrender.com"
-  const API_BASE = ""; // ← fill to enable server mode
+  // Your Render backend URL:
+  const API_BASE = "https://backnd-ap1p.onrender.com";
   let USE_SERVER = false;
   (async () => {
-    if (!API_BASE) return;
     try{
       const r = await fetch(API_BASE + "/api/health", { cache:"no-store" });
       if (r.ok) USE_SERVER = true;
@@ -453,30 +451,23 @@
     if(!pdfDoc || !pdfLibBytes) return;
     saveOverlay();
 
-    // Try server export if enabled and reachable
+    // Prefer server export if available
     if (USE_SERVER && API_BASE) {
       try{
         const fd = new FormData();
         fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'input.pdf');
 
-        // pages to keep (original indices)
-        const keepIdx = [];
-        for (let i = 0; i < pdfDoc.numPages; i++) {
-          if (!deletedPages.has(i)) keepIdx.push(i);
-        }
-        fd.append('keep', JSON.stringify(keepIdx));
+        // deletions: send original page indices the user deleted
+        fd.append('deletions', JSON.stringify([...deletedPages]));
 
-        // overlays re-indexed to match pages AFTER deletion:
-        // overlay_0.png -> first kept page, overlay_1.png -> second, etc.
-        for (let j = 0; j < keepIdx.length; j++) {
-          const orig = keepIdx[j];
-          const json = overlays.get(orig);
-          if (!json) continue;
-          const blob = await overlayBlobForPage(orig, overlayEl, json);
-          if (blob) fd.append('overlays', blob, `overlay_${j}.png`);
+        // overlays: use ORIGINAL page indices in filenames (overlay_3.png)
+        for (const [idx, json] of overlays.entries()){
+          if (deletedPages.has(idx)) continue; // don’t send for deleted pages
+          const blob = await overlayBlobForPage(idx, overlayEl, json);
+          if (blob) fd.append('overlays', blob, `overlay_${idx}.png`);
         }
 
-        const res = await fetch(API_BASE + '/api/burn', { method:'POST', body: fd });
+        const res = await fetch(API_BASE + '/api/pdf/export', { method:'POST', body: fd });
         if (!res.ok) throw new Error('Server export failed');
         const out = await res.blob();
         const url = URL.createObjectURL(out);
