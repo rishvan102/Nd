@@ -1,112 +1,542 @@
-# app.py
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import Response
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
-import json, io, re
-import fitz  # PyMuPDF
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Edit PDF — NiceDay</title>
 
-app = FastAPI(title="NiceDay PDF API")
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="light dark">
 
-# CORS: allow your static site to call this API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],      # tighten later to your domain(s)
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+  <style>
+    :root{
+      --bg:#f6f7fb; --panel:#fff; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb;
+      --brand:#0ea5e9;
+      --radius:14px;
+    }
+    [data-theme="dark"]{
+      --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9aa3b2; --line:#1f2a44;
+      --brand:#38bdf8;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+      color:var(--text); background:linear-gradient(180deg,var(--bg),#eaf0ff00 60%);
+    }
+    .shell{
+      display:grid; grid-template-columns:280px 1fr; gap:14px;
+      height:100dvh; padding:14px;
+    }
+    @media (max-width:900px){ .shell{ grid-template-columns:1fr; } }
+    .side, .main{
+      background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+      min-height:0;
+    }
+    .side{ display:flex; flex-direction:column; }
+    .main{ display:grid; grid-template-rows:auto 1fr auto; }
+    .bar{
+      display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+      padding:10px; border-bottom:1px solid var(--line);
+    }
+    .bar .group{display:flex; gap:6px; align-items:center}
+    .btn{
+      height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--line);
+      background:#fff; color:#111827; display:inline-grid; place-items:center; cursor:pointer; font-weight:600;
+    }
+    [data-theme="dark"] .btn{ background:#0f172a; color:var(--text); }
+    .btn[aria-pressed="true"]{ outline:3px solid color-mix(in srgb,var(--brand) 25%, transparent); }
+    .btn.brand{ border-color:color-mix(in srgb,var(--brand) 60%,#0000); background:color-mix(in srgb,var(--brand) 12%, #fff); }
+    input[type="file"]{ display:none }
+    .chip{ padding:6px 10px; border-radius:999px; border:1px solid var(--line); font-size:.9rem; color:var(--muted) }
+    .thumbs{ padding:10px; overflow:auto; display:grid; gap:10px; align-content:start }
+    .thumb{ border:2px solid transparent; border-radius:10px; background:#fff; padding:6px; cursor:pointer; }
+    .thumb[aria-current="true"]{ border-color:var(--brand) }
+    .thumb canvas{ display:block; width:100% }
+    [data-theme="dark"] .thumb{ background:#0f172a }
+    .stage{ position:relative; overflow:auto; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#0000 0 8px,#00000006 8px 16px);}
+    .page-wrap{ position:relative; }
+    #pdfCanvas{ position:relative; display:block; z-index:0; }
+    #overlay{ position:absolute; inset:0; z-index:1; }
+    canvas{ display:block; }
+    .footer{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:8px 10px; border-top:1px solid var(--line);
+    }
+    .hidden{ display:none !important }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- LEFT -->
+    <aside class="side">
+      <div class="bar" style="justify-content:space-between">
+        <label class="btn brand" for="pdfFile">Open PDF</label>
+        <input id="pdfFile" type="file" accept="application/pdf" />
+        <span id="docMeta" class="chip">No file</span>
+      </div>
+      <div id="thumbs" class="thumbs" aria-label="Page thumbnails"></div>
+    </aside>
 
-@app.get("/api/health")
-def health():
-    return {"ok": True}
+    <!-- RIGHT -->
+    <section class="main">
+      <div class="bar" role="toolbar" aria-label="Edit tools">
+        <div class="group">
+          <button class="btn" id="toolSelect" aria-pressed="true" title="Select (V)">Select</button>
+          <button class="btn" id="toolText"   title="Text (T)">Text</button>
+          <button class="btn" id="toolPen"    title="Pen (P)">Pen</button>
+          <button class="btn" id="toolHigh"   title="Highlighter (H)">Highlight</button>
+          <button class="btn" id="toolRect"   title="Rectangle (R)">Rect</button>
+          <button class="btn" id="toolArrow"  title="Arrow (A)">Arrow</button>
+          <label class="btn" for="imgFile" title="Add Image">Image…</label>
+          <input id="imgFile" type="file" accept="image/*" />
+        </div>
+        <div class="group">
+          <input id="color" type="color" value="#0ea5e9" title="Color"/>
+          <label class="chip">W <input id="stroke" type="range" min="1" max="36" value="3"></label>
+          <label class="chip">α <input id="alpha" type="range" min="0" max="1" step="0.05" value="1"></label>
+          <label class="chip">Font <input id="fontSize" type="number" min="8" max="96" value="20" style="width:64px"></label>
+        </div>
+        <div class="group">
+          <button class="btn" id="undo" title="Undo (Ctrl+Z)">Undo</button>
+          <button class="btn" id="redo" title="Redo (Ctrl+Y)">Redo</button>
+          <button class="btn" id="delObj" title="Delete (Del)">Delete</button>
+          <button class="btn" id="clearPg" title="Clear page">Clear</button>
+        </div>
+        <div class="group" style="margin-left:auto">
+          <button class="btn" id="zoomOut">−</button>
+          <span class="chip" id="zoomPct">100%</span>
+          <button class="btn" id="zoomIn">+</button>
+          <button class="btn" id="delPage" title="Delete this page">Delete page</button>
+          <button class="btn brand" id="export">Export PDF</button>
+        </div>
+      </div>
 
-def _new_index_after_deletions(orig_idx: int, deleted_sorted: List[int]) -> Optional[int]:
-    """Map original page index -> new index after deletions.
-       Returns None if the page was deleted.
-    """
-    if orig_idx in set(deleted_sorted):
-        return None
-    # how many deleted pages are <= this original index?
-    shift = sum(1 for d in deleted_sorted if d <= orig_idx)
-    return orig_idx - shift
+      <div id="stage" class="stage">
+        <div class="page-wrap">
+          <canvas id="pdfCanvas"></canvas>
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
 
-@app.post("/api/pdf/export")
-async def export_pdf(
-    pdf: UploadFile = File(..., description="Original PDF"),
-    deletions: str = Form("[]", description="JSON array of original indices to delete"),
-    overlays: List[UploadFile] = File(default=None, description="PNG overlays named overlay_<origIndex>.png"),
-):
-    # 1) Read inputs
-    try:
-        pdf_bytes = await pdf.read()
-    except Exception as e:
-        raise HTTPException(400, f"Failed to read PDF: {e}")
+      <div class="footer">
+        <div class="group">
+          <button class="btn" id="prev">‹ Prev</button>
+          <span class="chip"><span id="pageNum">0</span> / <span id="pageCount">0</span></span>
+          <button class="btn" id="next">Next ›</button>
+        </div>
+        <div class="group">
+          <a id="downloadLink" class="btn hidden" download="edited.pdf">Download</a>
+        </div>
+      </div>
+    </section>
+  </div>
 
-    try:
-        del_list = json.loads(deletions or "[]")
-        if not isinstance(del_list, list):
-            raise ValueError("deletions must be a JSON list")
-        # normalize: unique, ints, in-range handled later
-        deleted_sorted = sorted({int(x) for x in del_list if int(x) >= 0})
-    except Exception as e:
-        raise HTTPException(400, f"Invalid 'deletions': {e}")
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" crossorigin="anonymous"></script>
 
-    # Build overlay map: originalIndex -> bytes
-    overlay_map = {}
-    if overlays:
-        for up in overlays:
-            name = (up.filename or "").lower()
-            m = re.search(r"overlay_(\d+)", name)
-            if not m:
-                # ignore files with unexpected names
-                continue
-            idx = int(m.group(1))
-            overlay_map[idx] = await up.read()
+  <!-- Patch: normalize Canvas textBaseline -->
+  <script>
+    (function(){
+      try{
+        const P = CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+        if (!P) return;
+        const d = Object.getOwnPropertyDescriptor(P, 'textBaseline');
+        if (d && d.set && d.get){
+          const set = d.set, get = d.get;
+          Object.defineProperty(P, 'textBaseline', {
+            configurable:true, enumerable:true,
+            get(){ return get.call(this); },
+            set(v){ set.call(this, v === 'alphabetical' ? 'alphabetic' : v); }
+          });
+        }
+      }catch(e){}
+    })();
+  </script>
 
-    # 2) Open PDF
-    try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    except Exception as e:
-        raise HTTPException(400, f"Could not open PDF: {e}")
+  <script>
+  // ======= Server toggle (Render) =======
+  // Your Render backend URL:
+  const API_BASE = "https://backnd-ap1p.onrender.com";
+  let USE_SERVER = false;
+  (async () => {
+    try{
+      const r = await fetch(API_BASE + "/api/health", { cache:"no-store" });
+      if (r.ok) USE_SERVER = true;
+    }catch{}
+  })();
 
-    # 3) Delete pages (reverse so indices remain valid)
-    for d in sorted(deleted_sorted, reverse=True):
-        if 0 <= d < doc.page_count:
-            doc.delete_page(d)
+  // ---------- DOM ----------
+  const pdfFile   = document.getElementById('pdfFile');
+  const imgFile   = document.getElementById('imgFile');
+  const thumbs    = document.getElementById('thumbs');
+  const pdfCanvas = document.getElementById('pdfCanvas');
+  const overlayEl = document.getElementById('overlay');
+  const pageNumEl = document.getElementById('pageNum');
+  const pageCntEl = document.getElementById('pageCount');
+  const zoomPct   = document.getElementById('zoomPct');
+  const metaEl    = document.getElementById('docMeta');
 
-    # 4) Place overlays (stretch each PNG to full page)
-    #    overlay filenames use ORIGINAL indices; map them to NEW indices
-    for orig_idx, png_bytes in overlay_map.items():
-        new_idx = _new_index_after_deletions(orig_idx, deleted_sorted)
-        if new_idx is None:
-            continue  # that original page was deleted
-        if not (0 <= new_idx < doc.page_count):
-            continue
-        try:
-            page = doc.load_page(new_idx)
-            rect = page.rect  # full page
-            # overlay=True draws on top; keep_proportion=False stretches to full page
-            page.insert_image(rect, stream=png_bytes, keep_proportion=False, overlay=True)
-        except Exception as e:
-            # skip bad overlay but keep processing others
-            print(f"Overlay failed on page {new_idx}: {e}")
+  const ctx = pdfCanvas.getContext('2d', { willReadFrequently: true });
+  ctx.textBaseline = 'alphabetic';
 
-    # 5) Return PDF
-    try:
-        out = doc.tobytes()
-    except Exception as e:
-        raise HTTPException(500, f"Failed to serialize PDF: {e}")
-    finally:
-        doc.close()
+  // Toolbar elems
+  const toolButtons = {
+    select: document.getElementById('toolSelect'),
+    text:   document.getElementById('toolText'),
+    pen:    document.getElementById('toolPen'),
+    high:   document.getElementById('toolHigh'),
+    rect:   document.getElementById('toolRect'),
+    arrow:  document.getElementById('toolArrow'),
+  };
+  const colorInp  = document.getElementById('color');
+  const strokeInp = document.getElementById('stroke');
+  const alphaInp  = document.getElementById('alpha');
+  const fontInp   = document.getElementById('fontSize');
 
-    return Response(
-        content=out,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="edited.pdf"'},
-    )
+  const undoBtn   = document.getElementById('undo');
+  const redoBtn   = document.getElementById('redo');
+  const delObjBtn = document.getElementById('delObj');
+  const clearBtn  = document.getElementById('clearPg');
+  const delPgBtn  = document.getElementById('delPage');
+  const expBtn    = document.getElementById('export');
+  const dlLink    = document.getElementById('downloadLink');
 
-# Optional: simple root clarifier (avoids confusing 404 on "/")
-@app.get("/")
-def root():
-    return {"message": "NiceDay PDF API. Use POST /api/pdf/export"}
+  const prevBtn   = document.getElementById('prev');
+  const nextBtn   = document.getElementById('next');
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn= document.getElementById('zoomOut');
+
+  // ---------- State ----------
+  let pdfDoc = null;
+  let pdfJsBytes = null;   // for pdf.js (worker may detach)
+  let pdfLibBytes = null;  // preserved for pdf-lib export
+  let pageIndex = 0;
+  let scale = 1.25;
+  const overlays = new Map(); // pageIndex -> fabric JSON
+  const deletedPages = new Set();
+
+  if (!window.fabric) { alert('Fabric.js failed to load.'); throw new Error('Fabric not loaded'); }
+  const fab = new fabric.Canvas('overlay', { selection: true, preserveObjectStacking:true });
+  try { fab.upperCanvasEl.getContext('2d').textBaseline = 'alphabetic'; } catch {}
+
+  // history (undo/redo)
+  const hist = [];
+  const redoStack = [];
+  const pushHist = () => {
+    redoStack.length = 0;
+    hist.push(fab.toJSON());
+    if (hist.length > 50) hist.shift();
+  };
+  fab.on('object:added', pushHist);
+  fab.on('object:modified', pushHist);
+  fab.on('object:removed', pushHist);
+
+  // ---------- Helpers ----------
+  function setActiveTool(id){
+    Object.values(toolButtons).forEach(b => b.setAttribute('aria-pressed','false'));
+    toolButtons[id].setAttribute('aria-pressed','true');
+    fab.isDrawingMode = false;
+
+    if (id === 'pen' || id === 'high'){
+      fab.isDrawingMode = true;
+      const a = (id==='high') ? Math.min(+alphaInp.value, 0.35) : +alphaInp.value;
+      fab.freeDrawingBrush = new fabric.PencilBrush(fab);
+      fab.freeDrawingBrush.width = +strokeInp.value;
+      fab.freeDrawingBrush.color = hexToRgba(colorInp.value, a);
+    } else {
+      fab.off('mouse:down'); fab.off('mouse:move'); fab.off('mouse:up');
+    }
+  }
+  function hexToRgba(hex, a=1){
+    const n = hex.replace('#','');
+    const bigint = parseInt(n, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function fitOverlayTo(width, height){
+    overlayEl.width = width;
+    overlayEl.height = height;
+    fab.setWidth(width);
+    fab.setHeight(height);
+    fab.renderAll();
+  }
+  async function renderPage(){
+    const page = await pdfDoc.getPage(pageIndex+1);
+    const viewport = page.getViewport({ scale });
+    pdfCanvas.width  = viewport.width;
+    pdfCanvas.height = viewport.height;
+    fitOverlayTo(viewport.width, viewport.height);
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const key = pageIndex;
+    fab.clear();
+    if (overlays.has(key)) fab.loadFromJSON(overlays.get(key), fab.renderAll.bind(fab));
+
+    pageNumEl.textContent = String(pageIndex+1);
+    pageCntEl.textContent = String(pdfDoc.numPages);
+    zoomPct.textContent   = Math.round(scale*100)+'%';
+    [...thumbs.children].forEach((t,i)=> t.setAttribute('aria-current', i===pageIndex ? 'true':'false'));
+  }
+  async function buildThumbs(){
+    thumbs.innerHTML = '';
+    for(let i=1;i<=pdfDoc.numPages;i++){
+      const t = document.createElement('div');
+      t.className='thumb'; t.tabIndex=0; t.setAttribute('aria-current', i-1===pageIndex ? 'true':'false');
+      const c=document.createElement('canvas'); t.appendChild(c);
+      thumbs.appendChild(t);
+
+      const page = await pdfDoc.getPage(i);
+      const viewport = page.getViewport({ scale: .35 });
+      const cctx = c.getContext('2d');
+      try { cctx.textBaseline = 'alphabetic'; } catch {}
+      c.width=viewport.width; c.height=viewport.height;
+      page.render({ canvasContext:cctx, viewport });
+
+      t.addEventListener('click', ()=>{ saveOverlay(); pageIndex=i-1; renderPage(); });
+    }
+  }
+  function saveOverlay(){ overlays.set(pageIndex, fab.toJSON()); }
+  function rescale(factor){
+    saveOverlay();
+    scale = Math.max(.5, Math.min(4, scale * factor));
+    renderPage();
+  }
+
+  // ---------- File open ----------
+  pdfFile.addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const ab = await file.arrayBuffer();
+    pdfLibBytes = new Uint8Array(ab);          // keep intact for pdf-lib
+    pdfJsBytes  = new Uint8Array(ab.slice(0)); // clone for pdf.js (worker may detach)
+
+    pdfDoc  = await pdfjsLib.getDocument({ data: pdfJsBytes }).promise;
+    pageIndex = 0; scale = 1.25;
+    overlays.clear(); deletedPages.clear();
+    metaEl.textContent = `${file.name} • ${pdfDoc.numPages} pages`;
+    await buildThumbs();
+    await renderPage();
+  });
+
+  // ---------- Navigation & zoom ----------
+  prevBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex>0){ saveOverlay(); pageIndex--; renderPage(); } };
+  nextBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex<pdfDoc.numPages-1){ saveOverlay(); pageIndex++; renderPage(); } };
+  zoomInBtn.onclick  = ()=> rescale(1.15);
+  zoomOutBtn.onclick = ()=> rescale(1/1.15);
+
+  // ---------- Tools ----------
+  toolButtons.select.onclick = ()=> setActiveTool('select');
+  toolButtons.pen.onclick    = ()=> setActiveTool('pen');
+  toolButtons.high.onclick   = ()=> setActiveTool('high');
+
+  toolButtons.text.onclick   = ()=>{
+    setActiveTool('select');
+    const t = new fabric.IText('Text', {
+      left: 80, top: 80, fill: colorInp.value, fontSize: +fontInp.value, fontFamily:'Inter'
+    });
+    fab.add(t).setActiveObject(t);
+  };
+  toolButtons.rect.onclick   = ()=>{
+    setActiveTool('select');
+    const a = +alphaInp.value;
+    const r = new fabric.Rect({
+      left: 100, top: 100, width: 160, height: 90, fill: hexToRgba(colorInp.value, Math.min(a,.2)),
+      stroke: colorInp.value, strokeWidth: +strokeInp.value, rx: 8, ry: 8
+    });
+    fab.add(r).setActiveObject(r);
+  };
+  // Arrow
+  let arrowDraft=null;
+  toolButtons.arrow.onclick = ()=>{
+    setActiveTool('select');
+    fab.off('mouse:down'); fab.off('mouse:move'); fab.off('mouse:up');
+    fab.on('mouse:down', (opt)=>{
+      const p = fab.getPointer(opt.e);
+      const line = new fabric.Line([p.x,p.y,p.x,p.y], { stroke: colorInp.value, strokeWidth:+strokeInp.value, selectable:false });
+      const tri  = new fabric.Triangle({ left:p.x, top:p.y, width:12, height:14, fill: colorInp.value, originX:'center', originY:'center', angle:90 });
+      arrowDraft = new fabric.Group([line, tri], { selectable:true });
+      fab.add(arrowDraft);
+    });
+    fab.on('mouse:move', (opt)=>{
+      if(!arrowDraft) return;
+      const p = fab.getPointer(opt.e);
+      const [line, tri] = arrowDraft._objects;
+      line.set({ x2:p.x, y2:p.y });
+      const ang = Math.atan2(p.y-line.y1, p.x-line.x1) * 180/Math.PI;
+      tri.set({ left:p.x, top:p.y, angle:ang+90 });
+      arrowDraft.setCoords(); fab.requestRenderAll();
+    });
+    fab.on('mouse:up', ()=>{ arrowDraft=null; fab.off('mouse:*'); });
+  };
+
+  colorInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
+  strokeInp.oninput = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.width = +strokeInp.value; };
+  alphaInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
+
+  // Image upload via DataURL (avoids blob: URL CORS issues)
+  imgFile.addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      fabric.Image.fromURL(reader.result, img=>{
+        img.set({ left:120, top:120, scaleX:0.5, scaleY:0.5, crossOrigin:'anonymous' });
+        fab.add(img).setActiveObject(img);
+      }, { crossOrigin:'anonymous' });
+    };
+    reader.readAsDataURL(f);
+    imgFile.value='';
+  });
+
+  // delete / clear / undo / redo
+  delObjBtn.onclick = ()=>{
+    const objs = fab.getActiveObjects();
+    if(!objs.length) return;
+    objs.forEach(o=> fab.remove(o));
+    fab.discardActiveObject(); fab.requestRenderAll();
+  };
+  clearBtn.onclick = ()=>{ if(confirm('Clear all edits on this page?')) fab.clear(); };
+
+  undoBtn.onclick = ()=>{
+    if(!hist.length) return;
+    const last = hist.pop();
+    redoStack.push(fab.toJSON());
+    fab.loadFromJSON(last, fab.renderAll.bind(fab));
+  };
+  redoBtn.onclick = ()=>{
+    if(!redoStack.length) return;
+    const state = redoStack.pop();
+    hist.push(fab.toJSON());
+    fab.loadFromJSON(state, fab.renderAll.bind(fab));
+  };
+
+  // delete current page
+  delPgBtn.onclick = ()=>{
+    if(!pdfDoc) return;
+    if(confirm('Delete this page from the final export?')) {
+      deletedPages.add(pageIndex);
+      [...thumbs.children][pageIndex]?.classList.add('hidden');
+    }
+  };
+
+  // ---------- Export helpers ----------
+  async function overlayBlobForPage(pageIndex, overlayEl, json){
+    if (!json) return null;
+    const tmpEl = document.createElement('canvas');
+    tmpEl.width = overlayEl.width; tmpEl.height = overlayEl.height;
+    const tmp = new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
+    await new Promise(res=> tmp.loadFromJSON(json, ()=>{ tmp.renderAll(); res(); }));
+    const blob = await new Promise(res => tmpEl.toBlob(res, 'image/png'));
+    tmp.dispose();
+    return blob;
+  }
+
+  function downloadBytes(bytes){
+    const blob = new Blob([bytes], { type:'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    dlLink.href = url;
+    dlLink.classList.remove('hidden');
+    dlLink.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+
+  // ---------- Export ----------
+  expBtn.onclick = async ()=>{
+    if(!pdfDoc || !pdfLibBytes) return;
+    saveOverlay();
+
+    // Prefer server export if available
+    if (USE_SERVER && API_BASE) {
+      try{
+        const fd = new FormData();
+        fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'input.pdf');
+
+        // deletions: send original page indices the user deleted
+        fd.append('deletions', JSON.stringify([...deletedPages]));
+
+        // overlays: use ORIGINAL page indices in filenames (overlay_3.png)
+        for (const [idx, json] of overlays.entries()){
+          if (deletedPages.has(idx)) continue; // don’t send for deleted pages
+          const blob = await overlayBlobForPage(idx, overlayEl, json);
+          if (blob) fd.append('overlays', blob, `overlay_${idx}.png`);
+        }
+
+        const res = await fetch(API_BASE + '/api/pdf/export', { method:'POST', body: fd });
+        if (!res.ok) throw new Error('Server export failed');
+        const out = await res.blob();
+        const url = URL.createObjectURL(out);
+        dlLink.href = url;
+        dlLink.classList.remove('hidden');
+        dlLink.click();
+        setTimeout(()=>URL.revokeObjectURL(url), 4000);
+        return;
+      }catch(e){
+        console.warn('Server export failed, falling back to client mode:', e);
+      }
+    }
+
+    // Client-only export with pdf-lib
+    const src = await PDFLib.PDFDocument.load(pdfLibBytes); // preserved copy
+    const pages = src.getPages();
+
+    for(let i=0;i<pages.length;i++){
+      if (deletedPages.has(i)) continue;
+      const pg = pages[i];
+      const w = pg.getWidth(), h = pg.getHeight();
+
+      const json = overlays.get(i);
+      if (!json) continue;
+
+      // Render overlay JSON to offscreen at current overlay size
+      const tmpEl = document.createElement('canvas');
+      tmpEl.width = overlayEl.width; tmpEl.height = overlayEl.height;
+      const tmp = new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
+      await new Promise(res=> tmp.loadFromJSON(json, ()=>{ tmp.renderAll(); res(); }));
+
+      const dataURL = tmpEl.toDataURL('image/png');
+      const png = await src.embedPng(dataURL);
+
+      // Fit full overlay to page
+      pg.drawImage(png, { x:0, y:0, width:w, height:h });
+
+      tmp.dispose();
+    }
+
+    // Remove deleted pages
+    if (deletedPages.size){
+      const keep = pages.map((_,i)=>!deletedPages.has(i) ? i : -1).filter(i=>i>=0);
+      const newPdf = await PDFLib.PDFDocument.create();
+      const copied = await newPdf.copyPages(src, keep);
+      copied.forEach(p=> newPdf.addPage(p));
+      const bytes = await newPdf.save();
+      downloadBytes(bytes);
+    } else {
+      const bytes = await src.save();
+      downloadBytes(bytes);
+    }
+  };
+
+  // Shortcuts
+  window.addEventListener('keydown', (e)=>{
+    if (e.key==='Delete'){ delObjBtn.click(); }
+    if (e.ctrlKey && e.key==='z'){ e.preventDefault(); undoBtn.click(); }
+    if (e.ctrlKey && (e.key==='y' || (e.shiftKey && e.key==='Z'))){ e.preventDefault(); redoBtn.click(); }
+    if (e.key.toLowerCase()==='p'){ toolButtons.pen.click(); }
+    if (e.key.toLowerCase()==='t'){ toolButtons.text.click(); }
+    if (e.key.toLowerCase()==='h'){ toolButtons.high.click(); }
+    if (e.key.toLowerCase()==='r'){ toolButtons.rect.click(); }
+    if (e.key.toLowerCase()==='a'){ toolButtons.arrow.click(); }
+    if (e.key.toLowerCase()==='v'){ toolButtons.select.click(); }
+  });
+
+  // Default tool
+  setActiveTool('select');
+  </script>
+</body>
+</html>
