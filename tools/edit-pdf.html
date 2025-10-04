@@ -11,12 +11,10 @@
   <style>
     :root{
       --bg:#f6f7fb; --panel:#fff; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb;
-      --brand:#0ea5e9;
-      --radius:14px;
+      --brand:#0ea5e9; --radius:14px;
     }
     [data-theme="dark"]{
-      --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9aa3b2; --line:#1f2a44;
-      --brand:#38bdf8;
+      --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9aa3b2; --line:#1f2a44; --brand:#38bdf8;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -29,12 +27,10 @@
       height:100dvh; padding:14px;
     }
     @media (max-width:900px){ .shell{ grid-template-columns:1fr; } }
-    .side, .main{
-      background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-      min-height:0;
-    }
+    .side,.main{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); min-height:0; }
     .side{ display:flex; flex-direction:column; }
     .main{ display:grid; grid-template-rows:auto 1fr auto; }
+
     .bar{
       display:flex; flex-wrap:wrap; align-items:center; gap:8px;
       padding:10px; border-bottom:1px solid var(--line);
@@ -49,16 +45,20 @@
     .btn.brand{ border-color:color-mix(in srgb,var(--brand) 60%,#0000); background:color-mix(in srgb,var(--brand) 12%, #fff); }
     input[type="file"]{ display:none }
     .chip{ padding:6px 10px; border-radius:999px; border:1px solid var(--line); font-size:.9rem; color:var(--muted) }
+
     .thumbs{ padding:10px; overflow:auto; display:grid; gap:10px; align-content:start }
     .thumb{ border:2px solid transparent; border-radius:10px; background:#fff; padding:6px; cursor:pointer; }
     .thumb[aria-current="true"]{ border-color:var(--brand) }
     .thumb canvas{ display:block; width:100% }
     [data-theme="dark"] .thumb{ background:#0f172a }
+
     .stage{ position:relative; overflow:auto; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#0000 0 8px,#00000006 8px 16px);}
     .page-wrap{ position:relative; }
     #pdfCanvas{ position:relative; display:block; z-index:0; }
     #overlay{ position:absolute; inset:0; z-index:1; }
+    #hits{ position:absolute; inset:0; z-index:2; pointer-events:none; }
     canvas{ display:block; }
+
     .footer{
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:8px 10px; border-top:1px solid var(--line);
@@ -88,6 +88,7 @@
           <button class="btn" id="toolHigh"   title="Highlighter (H)">Highlight</button>
           <button class="btn" id="toolRect"   title="Rectangle (R)">Rect</button>
           <button class="btn" id="toolArrow"  title="Arrow (A)">Arrow</button>
+          <button class="btn" id="toolEditPdf" title="Edit existing PDF text (server)">Edit PDF Text</button>
           <label class="btn" for="imgFile" title="Add Image">Image…</label>
           <input id="imgFile" type="file" accept="image/*" />
         </div>
@@ -116,6 +117,8 @@
         <div class="page-wrap">
           <canvas id="pdfCanvas"></canvas>
           <canvas id="overlay"></canvas>
+          <!-- clickable text hitboxes (server mode) -->
+          <div id="hits"></div>
         </div>
       </div>
 
@@ -158,9 +161,8 @@
   </script>
 
   <script>
-  // ======= Server toggle (Render) =======
-  // Your Render backend URL:
-  const API_BASE = "https://backnd-ap1p.onrender.com";
+  /* ======= SERVER SETTINGS ======= */
+  const API_BASE = "https://backnd-ap1p.onrender.com"; // your Render URL
   let USE_SERVER = false;
   (async () => {
     try{
@@ -169,12 +171,13 @@
     }catch{}
   })();
 
-  // ---------- DOM ----------
+  /* ---------- DOM ---------- */
   const pdfFile   = document.getElementById('pdfFile');
   const imgFile   = document.getElementById('imgFile');
   const thumbs    = document.getElementById('thumbs');
   const pdfCanvas = document.getElementById('pdfCanvas');
   const overlayEl = document.getElementById('overlay');
+  const hitsEl    = document.getElementById('hits');
   const pageNumEl = document.getElementById('pageNum');
   const pageCntEl = document.getElementById('pageCount');
   const zoomPct   = document.getElementById('zoomPct');
@@ -183,7 +186,7 @@
   const ctx = pdfCanvas.getContext('2d', { willReadFrequently: true });
   ctx.textBaseline = 'alphabetic';
 
-  // Toolbar elems
+  // Toolbar
   const toolButtons = {
     select: document.getElementById('toolSelect'),
     text:   document.getElementById('toolText'),
@@ -191,6 +194,7 @@
     high:   document.getElementById('toolHigh'),
     rect:   document.getElementById('toolRect'),
     arrow:  document.getElementById('toolArrow'),
+    edit:   document.getElementById('toolEditPdf'),
   };
   const colorInp  = document.getElementById('color');
   const strokeInp = document.getElementById('stroke');
@@ -210,14 +214,19 @@
   const zoomInBtn = document.getElementById('zoomIn');
   const zoomOutBtn= document.getElementById('zoomOut');
 
-  // ---------- State ----------
+  /* ---------- State ---------- */
   let pdfDoc = null;
   let pdfJsBytes = null;   // for pdf.js (worker may detach)
-  let pdfLibBytes = null;  // preserved for pdf-lib export
+  let pdfLibBytes = null;  // preserved for pdf-lib/server export
   let pageIndex = 0;
   let scale = 1.25;
   const overlays = new Map(); // pageIndex -> fabric JSON
   const deletedPages = new Set();
+
+  // Server text-edit state
+  let editMode = false;
+  let currentSpans = [];            // spans for current page
+  const textEdits = [];             // {page, bbox, text, color?, size?, align?}
 
   if (!window.fabric) { alert('Fabric.js failed to load.'); throw new Error('Fabric not loaded'); }
   const fab = new fabric.Canvas('overlay', { selection: true, preserveObjectStacking:true });
@@ -235,10 +244,10 @@
   fab.on('object:modified', pushHist);
   fab.on('object:removed', pushHist);
 
-  // ---------- Helpers ----------
+  /* ---------- Helpers ---------- */
   function setActiveTool(id){
-    Object.values(toolButtons).forEach(b => b.setAttribute('aria-pressed','false'));
-    toolButtons[id].setAttribute('aria-pressed','true');
+    Object.values(toolButtons).forEach(b => b && b.setAttribute('aria-pressed','false'));
+    toolButtons[id] && toolButtons[id].setAttribute('aria-pressed','true');
     fab.isDrawingMode = false;
 
     if (id === 'pen' || id === 'high'){
@@ -266,6 +275,7 @@
     fab.setHeight(height);
     fab.renderAll();
   }
+
   async function renderPage(){
     const page = await pdfDoc.getPage(pageIndex+1);
     const viewport = page.getViewport({ scale });
@@ -283,7 +293,11 @@
     pageCntEl.textContent = String(pdfDoc.numPages);
     zoomPct.textContent   = Math.round(scale*100)+'%';
     [...thumbs.children].forEach((t,i)=> t.setAttribute('aria-current', i===pageIndex ? 'true':'false'));
+
+    // draw text hitboxes if in edit mode
+    if (editMode) { try { await fetchSpansAndDraw(); } catch {} }
   }
+
   async function buildThumbs(){
     thumbs.innerHTML = '';
     for(let i=1;i<=pdfDoc.numPages;i++){
@@ -302,36 +316,38 @@
       t.addEventListener('click', ()=>{ saveOverlay(); pageIndex=i-1; renderPage(); });
     }
   }
+
   function saveOverlay(){ overlays.set(pageIndex, fab.toJSON()); }
+
   function rescale(factor){
     saveOverlay();
     scale = Math.max(.5, Math.min(4, scale * factor));
     renderPage();
   }
 
-  // ---------- File open ----------
+  /* ---------- File open ---------- */
   pdfFile.addEventListener('change', async e=>{
     const file = e.target.files[0];
     if(!file) return;
     const ab = await file.arrayBuffer();
-    pdfLibBytes = new Uint8Array(ab);          // keep intact for pdf-lib
+    pdfLibBytes = new Uint8Array(ab);          // keep intact for pdf-lib/server
     pdfJsBytes  = new Uint8Array(ab.slice(0)); // clone for pdf.js (worker may detach)
 
     pdfDoc  = await pdfjsLib.getDocument({ data: pdfJsBytes }).promise;
     pageIndex = 0; scale = 1.25;
-    overlays.clear(); deletedPages.clear();
+    overlays.clear(); deletedPages.clear(); textEdits.length = 0;
     metaEl.textContent = `${file.name} • ${pdfDoc.numPages} pages`;
     await buildThumbs();
     await renderPage();
   });
 
-  // ---------- Navigation & zoom ----------
+  /* ---------- Navigation & zoom ---------- */
   prevBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex>0){ saveOverlay(); pageIndex--; renderPage(); } };
   nextBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex<pdfDoc.numPages-1){ saveOverlay(); pageIndex++; renderPage(); } };
   zoomInBtn.onclick  = ()=> rescale(1.15);
   zoomOutBtn.onclick = ()=> rescale(1/1.15);
 
-  // ---------- Tools ----------
+  /* ---------- Tools ---------- */
   toolButtons.select.onclick = ()=> setActiveTool('select');
   toolButtons.pen.onclick    = ()=> setActiveTool('pen');
   toolButtons.high.onclick   = ()=> setActiveTool('high');
@@ -352,6 +368,7 @@
     });
     fab.add(r).setActiveObject(r);
   };
+
   // Arrow
   let arrowDraft=null;
   toolButtons.arrow.onclick = ()=>{
@@ -376,11 +393,20 @@
     fab.on('mouse:up', ()=>{ arrowDraft=null; fab.off('mouse:*'); });
   };
 
+  // SERVER TEXT EDIT TOGGLE
+  toolButtons.edit.onclick = async ()=>{
+    if (!USE_SERVER) { alert("Server text edit is unavailable."); return; }
+    editMode = !editMode;
+    toolButtons.edit.setAttribute('aria-pressed', editMode ? 'true':'false');
+    hitsEl.innerHTML = '';
+    if (editMode) await fetchSpansAndDraw();
+  };
+
   colorInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
   strokeInp.oninput = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.width = +strokeInp.value; };
   alphaInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
 
-  // Image upload via DataURL (avoids blob: URL CORS issues)
+  // Image upload via DataURL (no blob: URL issues)
   imgFile.addEventListener('change', e=>{
     const f = e.target.files[0]; if(!f) return;
     const reader = new FileReader();
@@ -425,7 +451,67 @@
     }
   };
 
-  // ---------- Export helpers ----------
+  /* ---------- Server text inspect + hitboxes ---------- */
+  async function fetchSpansAndDraw(){
+    if (!USE_SERVER || !pdfLibBytes) return;
+    const fd = new FormData();
+    fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'in.pdf');
+    fd.append('page', String(pageIndex + 1));
+    const res = await fetch(API_BASE + '/api/pdf/inspect', { method:'POST', body: fd });
+    if (!res.ok) return;
+    const data = await res.json();
+    currentSpans = data.spans || [];
+    drawHitboxes(data.width, data.height);
+  }
+
+  function drawHitboxes(pdfW, pdfH){
+    hitsEl.innerHTML = '';
+    if (!editMode) return;
+
+    const sx = overlayEl.width / pdfW;
+    const sy = overlayEl.height / pdfH;
+
+    currentSpans.forEach((s) => {
+      const [x0,y0,x1,y1] = s.bbox;
+      const left = x0 * sx, top = y0 * sy, w = (x1-x0) * sx, h = (y1-y0) * sy;
+      const d = document.createElement('div');
+      d.style.cssText = `
+        position:absolute; left:${left}px; top:${top}px; width:${w}px; height:${h}px;
+        border:1px dashed #60a5fa88; background:#60a5fa22; border-radius:4px;
+        cursor:text; pointer-events:auto;
+      `;
+      d.title = s.text;
+      d.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const replacement = prompt('Replace text:', s.text);
+        if (replacement == null) return;
+
+        // remember for server
+        textEdits.push({
+          page: pageIndex,          // original page index
+          bbox: s.bbox,             // PDF coordinates
+          text: replacement,
+          color: "#000000",
+          size: s.size || +fontInp.value || 12,
+          align: "left"
+        });
+
+        // Visual feedback (cover + new text on overlay)
+        const rect = new fabric.Rect({
+          left, top, width:w, height:h, fill: 'white', opacity: 0.96, selectable:false
+        });
+        const txt = new fabric.Textbox(replacement, {
+          left: left + 2, top: top + 2, width: Math.max(10, w - 4),
+          fontSize: s.size || +fontInp.value || 12,
+          fill: '#111', selectable:false
+        });
+        fab.add(rect); fab.add(txt); fab.requestRenderAll();
+      });
+      hitsEl.appendChild(d);
+    });
+  }
+
+  /* ---------- Export helpers ---------- */
   async function overlayBlobForPage(pageIndex, overlayEl, json){
     if (!json) return null;
     const tmpEl = document.createElement('canvas');
@@ -446,25 +532,26 @@
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }
 
-  // ---------- Export ----------
+  /* ---------- Export ---------- */
   expBtn.onclick = async ()=>{
     if(!pdfDoc || !pdfLibBytes) return;
     saveOverlay();
 
-    // Prefer server export if available
-    if (USE_SERVER && API_BASE) {
+    // Try server first
+    if (USE_SERVER) {
       try{
         const fd = new FormData();
         fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'input.pdf');
-
-        // deletions: send original page indices the user deleted
         fd.append('deletions', JSON.stringify([...deletedPages]));
+        fd.append('replacements', JSON.stringify(textEdits));
 
-        // overlays: use ORIGINAL page indices in filenames (overlay_3.png)
-        for (const [idx, json] of overlays.entries()){
-          if (deletedPages.has(idx)) continue; // don’t send for deleted pages
-          const blob = await overlayBlobForPage(idx, overlayEl, json);
-          if (blob) fd.append('overlays', blob, `overlay_${idx}.png`);
+        // overlays: ORIGINAL page indices in filenames (overlay_3.png)
+        for (let i=0; i<pdfDoc.numPages; i++){
+          if (deletedPages.has(i)) continue;
+          const json = overlays.get(i);
+          if (!json) continue;
+          const blob = await overlayBlobForPage(i, overlayEl, json);
+          if (blob) fd.append('overlays', blob, `overlay_${i}.png`);
         }
 
         const res = await fetch(API_BASE + '/api/pdf/export', { method:'POST', body: fd });
@@ -481,8 +568,8 @@
       }
     }
 
-    // Client-only export with pdf-lib
-    const src = await PDFLib.PDFDocument.load(pdfLibBytes); // preserved copy
+    // Client-only fallback with pdf-lib (no real text replace)
+    const src = await PDFLib.PDFDocument.load(pdfLibBytes);
     const pages = src.getPages();
 
     for(let i=0;i<pages.length;i++){
@@ -493,22 +580,16 @@
       const json = overlays.get(i);
       if (!json) continue;
 
-      // Render overlay JSON to offscreen at current overlay size
       const tmpEl = document.createElement('canvas');
       tmpEl.width = overlayEl.width; tmpEl.height = overlayEl.height;
       const tmp = new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
       await new Promise(res=> tmp.loadFromJSON(json, ()=>{ tmp.renderAll(); res(); }));
-
       const dataURL = tmpEl.toDataURL('image/png');
       const png = await src.embedPng(dataURL);
-
-      // Fit full overlay to page
       pg.drawImage(png, { x:0, y:0, width:w, height:h });
-
       tmp.dispose();
     }
 
-    // Remove deleted pages
     if (deletedPages.size){
       const keep = pages.map((_,i)=>!deletedPages.has(i) ? i : -1).filter(i=>i>=0);
       const newPdf = await PDFLib.PDFDocument.create();
@@ -522,7 +603,7 @@
     }
   };
 
-  // Shortcuts
+  /* ---------- Shortcuts ---------- */
   window.addEventListener('keydown', (e)=>{
     if (e.key==='Delete'){ delObjBtn.click(); }
     if (e.ctrlKey && e.key==='z'){ e.preventDefault(); undoBtn.click(); }
