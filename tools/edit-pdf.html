@@ -5,70 +5,47 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Edit PDF — NiceDay</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;700&display=swap" rel="stylesheet">
   <meta name="color-scheme" content="light dark">
 
   <style>
-    :root{
-      --bg:#f6f7fb; --panel:#fff; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb;
-      --brand:#0ea5e9; --radius:14px;
-    }
-    [data-theme="dark"]{
-      --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9aa3b2; --line:#1f2a44; --brand:#38bdf8;
-    }
+    :root{ --bg:#f6f7fb; --panel:#fff; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb; --brand:#0ea5e9; --radius:14px; }
+    [data-theme="dark"]{ --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#9aa3b2; --line:#1f2a44; --brand:#38bdf8; }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
-      color:var(--text); background:linear-gradient(180deg,var(--bg),#eaf0ff00 60%);
-    }
-    .shell{
-      display:grid; grid-template-columns:280px 1fr; gap:14px;
-      height:100dvh; padding:14px;
-    }
-    @media (max-width:900px){ .shell{ grid-template-columns:1fr; } }
-    .side,.main{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); min-height:0; }
-    .side{ display:flex; flex-direction:column; }
-    .main{ display:grid; grid-template-rows:auto 1fr auto; }
-
-    .bar{
-      display:flex; flex-wrap:wrap; align-items:center; gap:8px;
-      padding:10px; border-bottom:1px solid var(--line);
-    }
-    .bar .group{display:flex; gap:6px; align-items:center}
-    .btn{
-      height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--line);
-      background:#fff; color:#111827; display:inline-grid; place-items:center; cursor:pointer; font-weight:600;
-    }
-    [data-theme="dark"] .btn{ background:#0f172a; color:var(--text); }
-    .btn[aria-pressed="true"]{ outline:3px solid color-mix(in srgb,var(--brand) 25%, transparent); }
-    .btn.brand{ border-color:color-mix(in srgb,var(--brand) 60%,#0000); background:color-mix(in srgb,var(--brand) 12%, #fff); }
+    body{margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial; color:var(--text); background:linear-gradient(180deg,var(--bg),#eaf0ff00 60%)}
+    .shell{display:grid; grid-template-columns:280px 1fr; gap:14px; height:100dvh; padding:14px}
+    @media (max-width:900px){ .shell{ grid-template-columns:1fr } }
+    .side,.main{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); min-height:0 }
+    .side{ display:flex; flex-direction:column }
+    .main{ display:grid; grid-template-rows:auto 1fr auto }
+    .bar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; border-bottom:1px solid var(--line) }
+    .bar .group{ display:flex; gap:6px; align-items:center }
+    .btn{ height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--line); background:#fff; color:#111827; display:inline-grid; place-items:center; cursor:pointer; font-weight:600 }
+    [data-theme="dark"] .btn{ background:#0f172a; color:var(--text) }
+    .btn[aria-pressed="true"]{ outline:3px solid color-mix(in srgb,var(--brand) 25%, transparent) }
+    .btn.brand{ border-color:color-mix(in srgb,var(--brand) 60%,#0000); background:color-mix(in srgb,var(--brand) 12%, #fff) }
     input[type="file"]{ display:none }
     .chip{ padding:6px 10px; border-radius:999px; border:1px solid var(--line); font-size:.9rem; color:var(--muted) }
-
     .thumbs{ padding:10px; overflow:auto; display:grid; gap:10px; align-content:start }
-    .thumb{ border:2px solid transparent; border-radius:10px; background:#fff; padding:6px; cursor:pointer; }
+    .thumb{ border:2px solid transparent; border-radius:10px; background:#fff; padding:6px; cursor:pointer }
     .thumb[aria-current="true"]{ border-color:var(--brand) }
     .thumb canvas{ display:block; width:100% }
     [data-theme="dark"] .thumb{ background:#0f172a }
-
-    .stage{ position:relative; overflow:auto; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#0000 0 8px,#00000006 8px 16px);}
-    .page-wrap{ position:relative; }
-    #pdfCanvas{ position:relative; display:block; z-index:0; }
+    .stage{ position:relative; overflow:auto; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#0000 0 8px,#00000006 8px 16px) }
+    .page-wrap{ position:relative }
+    #pdfCanvas{ position:relative; display:block; z-index:0 }
     #overlay{ position:absolute; inset:0; z-index:1; }
-    #hits{ position:absolute; inset:0; z-index:2; pointer-events:none; }
-    canvas{ display:block; }
-
-    .footer{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:8px 10px; border-top:1px solid var(--line);
-    }
+    /* DOM hit-layer for text edit boxes */
+    #hits{ position:absolute; inset:0; z-index:2; pointer-events:none }
+    .hit{ position:absolute; border:2px dashed color-mix(in srgb,var(--brand) 70%, transparent); background:transparent; border-radius:8px; pointer-events:auto; }
+    .hit:hover{ background:color-mix(in srgb,var(--brand) 12%, transparent) }
+    .footer{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-top:1px solid var(--line) }
     .hidden{ display:none !important }
   </style>
 </head>
 <body>
   <div class="shell">
-    <!-- LEFT -->
     <aside class="side">
       <div class="bar" style="justify-content:space-between">
         <label class="btn brand" for="pdfFile">Open PDF</label>
@@ -78,19 +55,18 @@
       <div id="thumbs" class="thumbs" aria-label="Page thumbnails"></div>
     </aside>
 
-    <!-- RIGHT -->
     <section class="main">
       <div class="bar" role="toolbar" aria-label="Edit tools">
         <div class="group">
-          <button class="btn" id="toolSelect" aria-pressed="true" title="Select (V)">Select</button>
-          <button class="btn" id="toolText"   title="Text (T)">Text</button>
-          <button class="btn" id="toolPen"    title="Pen (P)">Pen</button>
-          <button class="btn" id="toolHigh"   title="Highlighter (H)">Highlight</button>
-          <button class="btn" id="toolRect"   title="Rectangle (R)">Rect</button>
-          <button class="btn" id="toolArrow"  title="Arrow (A)">Arrow</button>
-          <button class="btn" id="toolEditPdf" title="Edit existing PDF text (server)">Edit PDF Text</button>
-          <label class="btn" for="imgFile" title="Add Image">Image…</label>
+          <button class="btn" id="toolSelect" aria-pressed="true">Select</button>
+          <button class="btn" id="toolText">Text</button>
+          <button class="btn" id="toolPen">Pen</button>
+          <button class="btn" id="toolHigh">Highlight</button>
+          <button class="btn" id="toolRect">Rect</button>
+          <button class="btn" id="toolArrow">Arrow</button>
+          <label class="btn" for="imgFile">Image…</label>
           <input id="imgFile" type="file" accept="image/*" />
+          <button class="btn" id="toolEditPdfText" title="Edit PDF Text (server)">Edit PDF Text</button>
         </div>
         <div class="group">
           <input id="color" type="color" value="#0ea5e9" title="Color"/>
@@ -99,16 +75,16 @@
           <label class="chip">Font <input id="fontSize" type="number" min="8" max="96" value="20" style="width:64px"></label>
         </div>
         <div class="group">
-          <button class="btn" id="undo" title="Undo (Ctrl+Z)">Undo</button>
-          <button class="btn" id="redo" title="Redo (Ctrl+Y)">Redo</button>
-          <button class="btn" id="delObj" title="Delete (Del)">Delete</button>
-          <button class="btn" id="clearPg" title="Clear page">Clear</button>
+          <button class="btn" id="undo">Undo</button>
+          <button class="btn" id="redo">Redo</button>
+          <button class="btn" id="delObj">Delete</button>
+          <button class="btn" id="clearPg">Clear</button>
         </div>
         <div class="group" style="margin-left:auto">
           <button class="btn" id="zoomOut">−</button>
           <span class="chip" id="zoomPct">100%</span>
           <button class="btn" id="zoomIn">+</button>
-          <button class="btn" id="delPage" title="Delete this page">Delete page</button>
+          <button class="btn" id="delPage">Delete page</button>
           <button class="btn brand" id="export">Export PDF</button>
         </div>
       </div>
@@ -117,7 +93,6 @@
         <div class="page-wrap">
           <canvas id="pdfCanvas"></canvas>
           <canvas id="overlay"></canvas>
-          <!-- clickable text hitboxes (server mode) -->
           <div id="hits"></div>
         </div>
       </div>
@@ -141,52 +116,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" crossorigin="anonymous"></script>
 
-  <!-- Patch: normalize Canvas textBaseline -->
   <script>
-    (function(){
-      try{
-        const P = CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
-        if (!P) return;
-        const d = Object.getOwnPropertyDescriptor(P, 'textBaseline');
-        if (d && d.set && d.get){
-          const set = d.set, get = d.get;
-          Object.defineProperty(P, 'textBaseline', {
-            configurable:true, enumerable:true,
-            get(){ return get.call(this); },
-            set(v){ set.call(this, v === 'alphabetical' ? 'alphabetic' : v); }
-          });
-        }
-      }catch(e){}
-    })();
-  </script>
-
-  <script>
-  /* ======= SERVER SETTINGS ======= */
-  const API_BASE = "https://backnd-ap1p.onrender.com"; // your Render URL
+  // -------- backend --------
+  const API_BASE = "https://backnd-ap1p.onrender.com";
   let USE_SERVER = false;
-  (async () => {
-    try{
-      const r = await fetch(API_BASE + "/api/health", { cache:"no-store" });
-      if (r.ok) USE_SERVER = true;
-    }catch{}
-  })();
+  (async ()=>{ try{ const r=await fetch(API_BASE+"/api/health",{cache:"no-store"}); if(r.ok) USE_SERVER=true; }catch{} })();
 
-  /* ---------- DOM ---------- */
-  const pdfFile   = document.getElementById('pdfFile');
-  const imgFile   = document.getElementById('imgFile');
-  const thumbs    = document.getElementById('thumbs');
+  // -------- DOM refs --------
+  const pdfFile = document.getElementById('pdfFile');
+  const imgFile = document.getElementById('imgFile');
+  const thumbs  = document.getElementById('thumbs');
   const pdfCanvas = document.getElementById('pdfCanvas');
   const overlayEl = document.getElementById('overlay');
-  const hitsEl    = document.getElementById('hits');
+  const hitsLayer = document.getElementById('hits');
   const pageNumEl = document.getElementById('pageNum');
   const pageCntEl = document.getElementById('pageCount');
   const zoomPct   = document.getElementById('zoomPct');
   const metaEl    = document.getElementById('docMeta');
 
-  const ctx = pdfCanvas.getContext('2d', { willReadFrequently: true });
-  ctx.textBaseline = 'alphabetic';
-
-  // Toolbar
   const toolButtons = {
     select: document.getElementById('toolSelect'),
     text:   document.getElementById('toolText'),
@@ -194,8 +141,9 @@
     high:   document.getElementById('toolHigh'),
     rect:   document.getElementById('toolRect'),
     arrow:  document.getElementById('toolArrow'),
-    edit:   document.getElementById('toolEditPdf'),
+    edit:   document.getElementById('toolEditPdfText'),
   };
+
   const colorInp  = document.getElementById('color');
   const strokeInp = document.getElementById('stroke');
   const alphaInp  = document.getElementById('alpha');
@@ -214,409 +162,298 @@
   const zoomInBtn = document.getElementById('zoomIn');
   const zoomOutBtn= document.getElementById('zoomOut');
 
-  /* ---------- State ---------- */
-  let pdfDoc = null;
-  let pdfJsBytes = null;   // for pdf.js (worker may detach)
-  let pdfLibBytes = null;  // preserved for pdf-lib/server export
-  let pageIndex = 0;
-  let scale = 1.25;
-  const overlays = new Map(); // pageIndex -> fabric JSON
-  const deletedPages = new Set();
+  // -------- state --------
+  let pdfDoc=null, pdfJsBytes=null, pdfLibBytes=null;
+  let pageIndex=0, scale=1.25;
+  const overlays=new Map();
+  const deletedPages=new Set();
+  const textSpansByPage=new Map(); // pageIndex -> {page_w,page_h,spans:[]}
+  let textMode=false;
 
-  // Server text-edit state
-  let editMode = false;
-  let currentSpans = [];            // spans for current page
-  const textEdits = [];             // {page, bbox, text, color?, size?, align?}
+  // canvases
+  const ctx = pdfCanvas.getContext('2d', { willReadFrequently:true });
+  if (!window.fabric) { alert('Fabric failed to load'); throw new Error('no fabric'); }
+  const fab = new fabric.Canvas('overlay', { selection:true, preserveObjectStacking:true });
+  fab.upperCanvasEl.getContext('2d').textBaseline = 'alphabetic';
 
-  if (!window.fabric) { alert('Fabric.js failed to load.'); throw new Error('Fabric not loaded'); }
-  const fab = new fabric.Canvas('overlay', { selection: true, preserveObjectStacking:true });
-  try { fab.upperCanvasEl.getContext('2d').textBaseline = 'alphabetic'; } catch {}
-
-  // history (undo/redo)
-  const hist = [];
-  const redoStack = [];
-  const pushHist = () => {
-    redoStack.length = 0;
-    hist.push(fab.toJSON());
-    if (hist.length > 50) hist.shift();
-  };
+  // history
+  const hist=[], redoStack=[];
+  const pushHist=()=>{ redoStack.length=0; hist.push(fab.toJSON()); if(hist.length>50) hist.shift(); };
   fab.on('object:added', pushHist);
   fab.on('object:modified', pushHist);
   fab.on('object:removed', pushHist);
 
-  /* ---------- Helpers ---------- */
-  function setActiveTool(id){
-    Object.values(toolButtons).forEach(b => b && b.setAttribute('aria-pressed','false'));
-    toolButtons[id] && toolButtons[id].setAttribute('aria-pressed','true');
-    fab.isDrawingMode = false;
-
-    if (id === 'pen' || id === 'high'){
-      fab.isDrawingMode = true;
-      const a = (id==='high') ? Math.min(+alphaInp.value, 0.35) : +alphaInp.value;
+  // helpers
+  const setActiveTool=(id)=>{
+    Object.values(toolButtons).forEach(b=>b.setAttribute('aria-pressed','false'));
+    toolButtons[id]?.setAttribute('aria-pressed','true');
+    fab.isDrawingMode=false;
+    if(id==='pen'||id==='high'){
+      fab.isDrawingMode=true;
+      const a = (id==='high')? Math.min(+alphaInp.value,0.35): +alphaInp.value;
       fab.freeDrawingBrush = new fabric.PencilBrush(fab);
       fab.freeDrawingBrush.width = +strokeInp.value;
-      fab.freeDrawingBrush.color = hexToRgba(colorInp.value, a);
-    } else {
+      fab.freeDrawingBrush.color = hexToRgba(colorInp.value,a);
+    }else{
       fab.off('mouse:down'); fab.off('mouse:move'); fab.off('mouse:up');
     }
-  }
-  function hexToRgba(hex, a=1){
-    const n = hex.replace('#','');
-    const bigint = parseInt(n, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r},${g},${b},${a})`;
-  }
-  function fitOverlayTo(width, height){
-    overlayEl.width = width;
-    overlayEl.height = height;
-    fab.setWidth(width);
-    fab.setHeight(height);
-    fab.renderAll();
-  }
+  };
+  const hexToRgba=(hex,a=1)=>{
+    const n=hex.replace('#',''); const b=parseInt(n,16);
+    return `rgba(${(b>>16)&255},${(b>>8)&255},${b&255},${a})`;
+  };
+  const fitOverlayTo=(w,h)=>{
+    overlayEl.width=w; overlayEl.height=h;
+    fab.setWidth(w); fab.setHeight(h); fab.renderAll();
+  };
 
   async function renderPage(){
     const page = await pdfDoc.getPage(pageIndex+1);
     const viewport = page.getViewport({ scale });
-    pdfCanvas.width  = viewport.width;
-    pdfCanvas.height = viewport.height;
+    pdfCanvas.width=viewport.width; pdfCanvas.height=viewport.height;
     fitOverlayTo(viewport.width, viewport.height);
+    await page.render({ canvasContext:ctx, viewport }).promise;
 
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    const key = pageIndex;
     fab.clear();
-    if (overlays.has(key)) fab.loadFromJSON(overlays.get(key), fab.renderAll.bind(fab));
+    if (overlays.has(pageIndex)) fab.loadFromJSON(overlays.get(pageIndex), fab.renderAll.bind(fab));
+    pageNumEl.textContent=String(pageIndex+1);
+    pageCntEl.textContent=String(pdfDoc.numPages);
+    zoomPct.textContent = Math.round(scale*100)+'%';
+    [...thumbs.children].forEach((t,i)=>t.setAttribute('aria-current', i===pageIndex?'true':'false'));
 
-    pageNumEl.textContent = String(pageIndex+1);
-    pageCntEl.textContent = String(pdfDoc.numPages);
-    zoomPct.textContent   = Math.round(scale*100)+'%';
-    [...thumbs.children].forEach((t,i)=> t.setAttribute('aria-current', i===pageIndex ? 'true':'false'));
-
-    // draw text hitboxes if in edit mode
-    if (editMode) { try { await fetchSpansAndDraw(); } catch {} }
+    hitsLayer.innerHTML='';
+    if (textMode) await ensureSpansAndDrawHits();
   }
 
   async function buildThumbs(){
-    thumbs.innerHTML = '';
+    thumbs.innerHTML='';
     for(let i=1;i<=pdfDoc.numPages;i++){
-      const t = document.createElement('div');
-      t.className='thumb'; t.tabIndex=0; t.setAttribute('aria-current', i-1===pageIndex ? 'true':'false');
-      const c=document.createElement('canvas'); t.appendChild(c);
-      thumbs.appendChild(t);
-
-      const page = await pdfDoc.getPage(i);
-      const viewport = page.getViewport({ scale: .35 });
-      const cctx = c.getContext('2d');
-      try { cctx.textBaseline = 'alphabetic'; } catch {}
-      c.width=viewport.width; c.height=viewport.height;
+      const t=document.createElement('div'); t.className='thumb'; t.tabIndex=0; t.setAttribute('aria-current', i-1===pageIndex?'true':'false');
+      const c=document.createElement('canvas'); t.appendChild(c); thumbs.appendChild(t);
+      const page=await pdfDoc.getPage(i); const viewport=page.getViewport({ scale:.35 });
+      const cctx=c.getContext('2d'); c.width=viewport.width; c.height=viewport.height;
       page.render({ canvasContext:cctx, viewport });
-
-      t.addEventListener('click', ()=>{ saveOverlay(); pageIndex=i-1; renderPage(); });
+      t.addEventListener('click',()=>{ saveOverlay(); pageIndex=i-1; renderPage(); });
     }
   }
 
   function saveOverlay(){ overlays.set(pageIndex, fab.toJSON()); }
+  function rescale(f){ saveOverlay(); scale=Math.max(.5, Math.min(4, scale*f)); renderPage(); }
 
-  function rescale(factor){
-    saveOverlay();
-    scale = Math.max(.5, Math.min(4, scale * factor));
-    renderPage();
+  // ---------- text inspect + inline editor ----------
+  async function ensureSpansAndDrawHits(){
+    let info = textSpansByPage.get(pageIndex);
+    if (!info && USE_SERVER){
+      // ask server
+      const fd=new FormData();
+      fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'in.pdf');
+      fd.append('page', String(pageIndex+1));
+      const r = await fetch(API_BASE+'/api/pdf/inspect',{ method:'POST', body:fd });
+      info = await r.json(); // {page_w,page_h,spans:[{x,y,w,h,text}]}
+      textSpansByPage.set(pageIndex, info);
+    }
+    drawHits(info);
   }
 
-  /* ---------- File open ---------- */
-  pdfFile.addEventListener('change', async e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    const ab = await file.arrayBuffer();
-    pdfLibBytes = new Uint8Array(ab);          // keep intact for pdf-lib/server
-    pdfJsBytes  = new Uint8Array(ab.slice(0)); // clone for pdf.js (worker may detach)
+  function drawHits(info){
+    hitsLayer.innerHTML='';
+    if(!info || !info.spans || !info.spans.length) return;
+    const sx = overlayEl.width / info.page_w;
+    const sy = overlayEl.height / info.page_h;
+    info.spans.forEach((s,idx)=>{
+      const left = s.x * sx, top = (info.page_h - s.y - s.h) * sy; // PyMuPDF y-up → canvas y-down
+      const w = s.w * sx, h = s.h * sy;
+      const div = document.createElement('div');
+      div.className='hit';
+      div.style.left=left+'px'; div.style.top=top+'px';
+      div.style.width=w+'px'; div.style.height=h+'px';
+      div.title = (s.text||'').slice(0,120);
+      div.addEventListener('click', ()=> spawnInlineEditor({left,top,width:w,height:h}, s.text||'', div));
+      hitsLayer.appendChild(div);
+    });
+  }
 
-    pdfDoc  = await pdfjsLib.getDocument({ data: pdfJsBytes }).promise;
-    pageIndex = 0; scale = 1.25;
-    overlays.clear(); deletedPages.clear(); textEdits.length = 0;
-    metaEl.textContent = `${file.name} • ${pdfDoc.numPages} pages`;
-    await buildThumbs();
-    await renderPage();
+  function spawnInlineEditor(rect, initialText, hitEl){
+    // cover original text
+    const cover = new fabric.Rect({
+      left: rect.left, top: rect.top, width: rect.width, height: rect.height,
+      fill: '#fff', selectable:false, evented:false
+    });
+    fab.add(cover);
+
+    // add editable text
+    const fontSize = Math.max(8, Math.round(rect.height*0.82));
+    const it = new fabric.IText(initialText || ' ', {
+      left: rect.left+2, top: rect.top+Math.max(0, (rect.height-fontSize)*0.15),
+      fontFamily: 'Noto Sans Tamil, Inter, -apple-system, Segoe UI, Roboto, Arial',
+      fill: '#111827', fontSize, editable:true
+    });
+    fab.add(it).setActiveObject(it);
+    it.enterEditing(); it.selectAll();
+
+    // remove that hitbox so it doesn't sit on top
+    hitEl?.remove();
+  }
+
+  // ---------- open file ----------
+  pdfFile.addEventListener('change', async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const ab = await f.arrayBuffer();
+    pdfLibBytes = new Uint8Array(ab);
+    pdfJsBytes  = new Uint8Array(ab.slice(0));
+    pdfDoc = await pdfjsLib.getDocument({ data: pdfJsBytes }).promise;
+    pageIndex=0; scale=1.25; overlays.clear(); deletedPages.clear(); textSpansByPage.clear();
+    metaEl.textContent = `${f.name} • ${pdfDoc.numPages} pages`;
+    await buildThumbs(); await renderPage();
   });
 
-  /* ---------- Navigation & zoom ---------- */
+  // ---------- nav & zoom ----------
   prevBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex>0){ saveOverlay(); pageIndex--; renderPage(); } };
   nextBtn.onclick = ()=>{ if(!pdfDoc) return; if(pageIndex<pdfDoc.numPages-1){ saveOverlay(); pageIndex++; renderPage(); } };
   zoomInBtn.onclick  = ()=> rescale(1.15);
   zoomOutBtn.onclick = ()=> rescale(1/1.15);
 
-  /* ---------- Tools ---------- */
+  // ---------- tools ----------
   toolButtons.select.onclick = ()=> setActiveTool('select');
   toolButtons.pen.onclick    = ()=> setActiveTool('pen');
   toolButtons.high.onclick   = ()=> setActiveTool('high');
-
   toolButtons.text.onclick   = ()=>{
     setActiveTool('select');
-    const t = new fabric.IText('Text', {
-      left: 80, top: 80, fill: colorInp.value, fontSize: +fontInp.value, fontFamily:'Inter'
-    });
-    fab.add(t).setActiveObject(t);
+    const t=new fabric.IText('Text',{ left:80, top:80, fill:colorInp.value, fontSize:+fontInp.value, fontFamily:'Inter' });
+    fab.add(t).setActiveObject(t); t.enterEditing(); t.selectAll();
   };
   toolButtons.rect.onclick   = ()=>{
     setActiveTool('select');
-    const a = +alphaInp.value;
-    const r = new fabric.Rect({
-      left: 100, top: 100, width: 160, height: 90, fill: hexToRgba(colorInp.value, Math.min(a,.2)),
-      stroke: colorInp.value, strokeWidth: +strokeInp.value, rx: 8, ry: 8
-    });
+    const r=new fabric.Rect({ left:100, top:100, width:160, height:90, fill:hexToRgba(colorInp.value, Math.min(+alphaInp.value,.2)), stroke:colorInp.value, strokeWidth:+strokeInp.value, rx:8, ry:8 });
     fab.add(r).setActiveObject(r);
   };
-
-  // Arrow
+  // arrow
   let arrowDraft=null;
   toolButtons.arrow.onclick = ()=>{
     setActiveTool('select');
     fab.off('mouse:down'); fab.off('mouse:move'); fab.off('mouse:up');
     fab.on('mouse:down', (opt)=>{
-      const p = fab.getPointer(opt.e);
-      const line = new fabric.Line([p.x,p.y,p.x,p.y], { stroke: colorInp.value, strokeWidth:+strokeInp.value, selectable:false });
-      const tri  = new fabric.Triangle({ left:p.x, top:p.y, width:12, height:14, fill: colorInp.value, originX:'center', originY:'center', angle:90 });
-      arrowDraft = new fabric.Group([line, tri], { selectable:true });
-      fab.add(arrowDraft);
+      const p=fab.getPointer(opt.e);
+      const line=new fabric.Line([p.x,p.y,p.x,p.y],{ stroke:colorInp.value, strokeWidth:+strokeInp.value, selectable:false });
+      const tri=new fabric.Triangle({ left:p.x, top:p.y, width:12, height:14, fill:colorInp.value, originX:'center', originY:'center', angle:90 });
+      arrowDraft=new fabric.Group([line,tri],{ selectable:true }); fab.add(arrowDraft);
     });
     fab.on('mouse:move', (opt)=>{
-      if(!arrowDraft) return;
-      const p = fab.getPointer(opt.e);
-      const [line, tri] = arrowDraft._objects;
-      line.set({ x2:p.x, y2:p.y });
-      const ang = Math.atan2(p.y-line.y1, p.x-line.x1) * 180/Math.PI;
-      tri.set({ left:p.x, top:p.y, angle:ang+90 });
+      if(!arrowDraft) return; const p=fab.getPointer(opt.e);
+      const [line,tri]=arrowDraft._objects; line.set({x2:p.x,y2:p.y});
+      const ang=Math.atan2(p.y-line.y1,p.x-line.x1)*180/Math.PI; tri.set({left:p.x, top:p.y, angle:ang+90});
       arrowDraft.setCoords(); fab.requestRenderAll();
     });
     fab.on('mouse:up', ()=>{ arrowDraft=null; fab.off('mouse:*'); });
   };
 
-  // SERVER TEXT EDIT TOGGLE
+  // Edit PDF Text mode toggle
   toolButtons.edit.onclick = async ()=>{
-    if (!USE_SERVER) { alert("Server text edit is unavailable."); return; }
-    editMode = !editMode;
-    toolButtons.edit.setAttribute('aria-pressed', editMode ? 'true':'false');
-    hitsEl.innerHTML = '';
-    if (editMode) await fetchSpansAndDraw();
+    if (!USE_SERVER){ alert('Server not available (inspect).'); return; }
+    textMode = !textMode;
+    toolButtons.edit.setAttribute('aria-pressed', textMode?'true':'false');
+    hitsLayer.innerHTML='';
+    if (textMode) await ensureSpansAndDrawHits();
   };
 
   colorInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
   strokeInp.oninput = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.width = +strokeInp.value; };
   alphaInp.oninput  = ()=>{ if(fab.isDrawingMode) fab.freeDrawingBrush.color = hexToRgba(colorInp.value, +alphaInp.value); };
 
-  // Image upload via DataURL (no blob: URL issues)
+  // image drop
   imgFile.addEventListener('change', e=>{
-    const f = e.target.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      fabric.Image.fromURL(reader.result, img=>{
-        img.set({ left:120, top:120, scaleX:0.5, scaleY:0.5, crossOrigin:'anonymous' });
-        fab.add(img).setActiveObject(img);
-      }, { crossOrigin:'anonymous' });
-    };
-    reader.readAsDataURL(f);
-    imgFile.value='';
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ fabric.Image.fromURL(rd.result, img=>{ img.set({left:120, top:120, scaleX:.5, scaleY:.5}); fab.add(img).setActiveObject(img); }); };
+    rd.readAsDataURL(f); imgFile.value='';
   });
 
-  // delete / clear / undo / redo
-  delObjBtn.onclick = ()=>{
-    const objs = fab.getActiveObjects();
-    if(!objs.length) return;
-    objs.forEach(o=> fab.remove(o));
-    fab.discardActiveObject(); fab.requestRenderAll();
+  // delete/clear/undo/redo
+  delObjBtn.onclick=()=>{
+    const objs=fab.getActiveObjects(); if(!objs.length) return;
+    objs.forEach(o=>fab.remove(o)); fab.discardActiveObject(); fab.requestRenderAll();
   };
-  clearBtn.onclick = ()=>{ if(confirm('Clear all edits on this page?')) fab.clear(); };
+  clearBtn.onclick=()=>{ if(confirm('Clear all edits on this page?')) fab.clear(); };
+  undoBtn.onclick=()=>{ if(!hist.length) return; const last=hist.pop(); redoStack.push(fab.toJSON()); fab.loadFromJSON(last, fab.renderAll.bind(fab)); };
+  redoBtn.onclick=()=>{ if(!redoStack.length) return; const st=redoStack.pop(); hist.push(fab.toJSON()); fab.loadFromJSON(st, fab.renderAll.bind(fab)); };
 
-  undoBtn.onclick = ()=>{
-    if(!hist.length) return;
-    const last = hist.pop();
-    redoStack.push(fab.toJSON());
-    fab.loadFromJSON(last, fab.renderAll.bind(fab));
-  };
-  redoBtn.onclick = ()=>{
-    if(!redoStack.length) return;
-    const state = redoStack.pop();
-    hist.push(fab.toJSON());
-    fab.loadFromJSON(state, fab.renderAll.bind(fab));
-  };
+  delPgBtn.onclick=()=>{ if(!pdfDoc) return; if(confirm('Delete this page from export?')){ deletedPages.add(pageIndex); [...thumbs.children][pageIndex]?.classList.add('hidden'); } };
 
-  // delete current page
-  delPgBtn.onclick = ()=>{
-    if(!pdfDoc) return;
-    if(confirm('Delete this page from the final export?')) {
-      deletedPages.add(pageIndex);
-      [...thumbs.children][pageIndex]?.classList.add('hidden');
-    }
-  };
-
-  /* ---------- Server text inspect + hitboxes ---------- */
-  async function fetchSpansAndDraw(){
-    if (!USE_SERVER || !pdfLibBytes) return;
-    const fd = new FormData();
-    fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'in.pdf');
-    fd.append('page', String(pageIndex + 1));
-    const res = await fetch(API_BASE + '/api/pdf/inspect', { method:'POST', body: fd });
-    if (!res.ok) return;
-    const data = await res.json();
-    currentSpans = data.spans || [];
-    drawHitboxes(data.width, data.height);
-  }
-
-  function drawHitboxes(pdfW, pdfH){
-    hitsEl.innerHTML = '';
-    if (!editMode) return;
-
-    const sx = overlayEl.width / pdfW;
-    const sy = overlayEl.height / pdfH;
-
-    currentSpans.forEach((s) => {
-      const [x0,y0,x1,y1] = s.bbox;
-      const left = x0 * sx, top = y0 * sy, w = (x1-x0) * sx, h = (y1-y0) * sy;
-      const d = document.createElement('div');
-      d.style.cssText = `
-        position:absolute; left:${left}px; top:${top}px; width:${w}px; height:${h}px;
-        border:1px dashed #60a5fa88; background:#60a5fa22; border-radius:4px;
-        cursor:text; pointer-events:auto;
-      `;
-      d.title = s.text;
-      d.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        const replacement = prompt('Replace text:', s.text);
-        if (replacement == null) return;
-
-        // remember for server
-        textEdits.push({
-          page: pageIndex,          // original page index
-          bbox: s.bbox,             // PDF coordinates
-          text: replacement,
-          color: "#000000",
-          size: s.size || +fontInp.value || 12,
-          align: "left"
-        });
-
-        // Visual feedback (cover + new text on overlay)
-        const rect = new fabric.Rect({
-          left, top, width:w, height:h, fill: 'white', opacity: 0.96, selectable:false
-        });
-        const txt = new fabric.Textbox(replacement, {
-          left: left + 2, top: top + 2, width: Math.max(10, w - 4),
-          fontSize: s.size || +fontInp.value || 12,
-          fill: '#111', selectable:false
-        });
-        fab.add(rect); fab.add(txt); fab.requestRenderAll();
-      });
-      hitsEl.appendChild(d);
-    });
-  }
-
-  /* ---------- Export helpers ---------- */
-  async function overlayBlobForPage(pageIndex, overlayEl, json){
-    if (!json) return null;
-    const tmpEl = document.createElement('canvas');
-    tmpEl.width = overlayEl.width; tmpEl.height = overlayEl.height;
-    const tmp = new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
+  // export helpers
+  async function overlayBlobForPage(idx){
+    const json = overlays.get(idx); if(!json) return null;
+    const tmpEl=document.createElement('canvas'); tmpEl.width=overlayEl.width; tmpEl.height=overlayEl.height;
+    const tmp=new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
     await new Promise(res=> tmp.loadFromJSON(json, ()=>{ tmp.renderAll(); res(); }));
     const blob = await new Promise(res => tmpEl.toBlob(res, 'image/png'));
-    tmp.dispose();
-    return blob;
+    tmp.dispose(); return blob;
   }
-
   function downloadBytes(bytes){
-    const blob = new Blob([bytes], { type:'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    dlLink.href = url;
-    dlLink.classList.remove('hidden');
-    dlLink.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    dlLink.href=url; dlLink.classList.remove('hidden'); dlLink.click(); setTimeout(()=>URL.revokeObjectURL(url),4000);
   }
 
-  /* ---------- Export ---------- */
+  // export
   expBtn.onclick = async ()=>{
     if(!pdfDoc || !pdfLibBytes) return;
     saveOverlay();
 
-    // Try server first
-    if (USE_SERVER) {
+    // try server path
+    if (USE_SERVER){
       try{
-        const fd = new FormData();
-        fd.append('pdf', new Blob([pdfLibBytes], {type:'application/pdf'}), 'input.pdf');
+        const fd=new FormData();
+        fd.append('pdf', new Blob([pdfLibBytes],{type:'application/pdf'}),'input.pdf');
         fd.append('deletions', JSON.stringify([...deletedPages]));
-        fd.append('replacements', JSON.stringify(textEdits));
-
-        // overlays: ORIGINAL page indices in filenames (overlay_3.png)
-        for (let i=0; i<pdfDoc.numPages; i++){
+        for(let i=0;i<pdfDoc.numPages;i++){
           if (deletedPages.has(i)) continue;
-          const json = overlays.get(i);
-          if (!json) continue;
-          const blob = await overlayBlobForPage(i, overlayEl, json);
+          const blob = await overlayBlobForPage(i);
           if (blob) fd.append('overlays', blob, `overlay_${i}.png`);
         }
-
-        const res = await fetch(API_BASE + '/api/pdf/export', { method:'POST', body: fd });
-        if (!res.ok) throw new Error('Server export failed');
-        const out = await res.blob();
-        const url = URL.createObjectURL(out);
-        dlLink.href = url;
-        dlLink.classList.remove('hidden');
-        dlLink.click();
-        setTimeout(()=>URL.revokeObjectURL(url), 4000);
+        const r = await fetch(API_BASE+'/api/pdf/export',{method:'POST', body:fd});
+        if(!r.ok) throw new Error('server export failed');
+        const out = await r.blob(); const url=URL.createObjectURL(out);
+        dlLink.href=url; dlLink.classList.remove('hidden'); dlLink.click(); setTimeout(()=>URL.revokeObjectURL(url),4000);
         return;
-      }catch(e){
-        console.warn('Server export failed, falling back to client mode:', e);
-      }
+      }catch(e){ console.warn('Server export failed, falling back', e); }
     }
 
-    // Client-only fallback with pdf-lib (no real text replace)
+    // client-only fallback (pdf-lib)
     const src = await PDFLib.PDFDocument.load(pdfLibBytes);
     const pages = src.getPages();
-
     for(let i=0;i<pages.length;i++){
       if (deletedPages.has(i)) continue;
-      const pg = pages[i];
-      const w = pg.getWidth(), h = pg.getHeight();
-
-      const json = overlays.get(i);
-      if (!json) continue;
-
-      const tmpEl = document.createElement('canvas');
-      tmpEl.width = overlayEl.width; tmpEl.height = overlayEl.height;
-      const tmp = new fabric.Canvas(tmpEl, { backgroundColor:'transparent' });
+      const pg=pages[i], w=pg.getWidth(), h=pg.getHeight();
+      const json=overlays.get(i); if(!json) continue;
+      const tmpEl=document.createElement('canvas'); tmpEl.width=overlayEl.width; tmpEl.height=overlayEl.height;
+      const tmp=new fabric.Canvas(tmpEl,{backgroundColor:'transparent'});
       await new Promise(res=> tmp.loadFromJSON(json, ()=>{ tmp.renderAll(); res(); }));
-      const dataURL = tmpEl.toDataURL('image/png');
-      const png = await src.embedPng(dataURL);
-      pg.drawImage(png, { x:0, y:0, width:w, height:h });
-      tmp.dispose();
+      const dataURL=tmpEl.toDataURL('image/png'); const png=await src.embedPng(dataURL);
+      pg.drawImage(png,{x:0,y:0,width:w,height:h}); tmp.dispose();
     }
-
     if (deletedPages.size){
-      const keep = pages.map((_,i)=>!deletedPages.has(i) ? i : -1).filter(i=>i>=0);
-      const newPdf = await PDFLib.PDFDocument.create();
-      const copied = await newPdf.copyPages(src, keep);
-      copied.forEach(p=> newPdf.addPage(p));
-      const bytes = await newPdf.save();
-      downloadBytes(bytes);
-    } else {
-      const bytes = await src.save();
-      downloadBytes(bytes);
+      const keep = pages.map((_,i)=>!deletedPages.has(i)?i:-1).filter(i=>i>=0);
+      const out = await PDFLib.PDFDocument.create();
+      const copied = await out.copyPages(src, keep); copied.forEach(p=>out.addPage(p));
+      const bytes = await out.save(); downloadBytes(bytes);
+    }else{
+      const bytes = await src.save(); downloadBytes(bytes);
     }
   };
 
-  /* ---------- Shortcuts ---------- */
-  window.addEventListener('keydown', (e)=>{
-    if (e.key==='Delete'){ delObjBtn.click(); }
-    if (e.ctrlKey && e.key==='z'){ e.preventDefault(); undoBtn.click(); }
-    if (e.ctrlKey && (e.key==='y' || (e.shiftKey && e.key==='Z'))){ e.preventDefault(); redoBtn.click(); }
-    if (e.key.toLowerCase()==='p'){ toolButtons.pen.click(); }
-    if (e.key.toLowerCase()==='t'){ toolButtons.text.click(); }
-    if (e.key.toLowerCase()==='h'){ toolButtons.high.click(); }
-    if (e.key.toLowerCase()==='r'){ toolButtons.rect.click(); }
-    if (e.key.toLowerCase()==='a'){ toolButtons.arrow.click(); }
-    if (e.key.toLowerCase()==='v'){ toolButtons.select.click(); }
+  // shortcuts
+  window.addEventListener('keydown',(e)=>{
+    if (e.key==='Delete') delObjBtn.click();
+    if (e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoBtn.click(); }
+    if (e.ctrlKey && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key==='Z'))){ e.preventDefault(); redoBtn.click(); }
+    const k=e.key.toLowerCase();
+    if (k==='p') toolButtons.pen.click();
+    if (k==='t') toolButtons.text.click();
+    if (k==='h') toolButtons.high.click();
+    if (k==='r') toolButtons.rect.click();
+    if (k==='a') toolButtons.arrow.click();
+    if (k==='v') toolButtons.select.click();
   });
 
-  // Default tool
   setActiveTool('select');
   </script>
 </body>
